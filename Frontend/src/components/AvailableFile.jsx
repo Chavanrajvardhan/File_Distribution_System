@@ -8,23 +8,16 @@ function AvailableFile() {
   const [userId, setUserId] = useState(null);
   const [files, setFiles] = useState([]);
 
-  const [receivers, setReceivers] = useState([
-    { value: 'user1', label: 'User 1' },
-    { value: 'user2', label: 'User 2' },
-    { value: 'user3', label: 'User 3' },
-  ]);
-  
+  const [receivers, setReceivers] = useState([]);
+  const [rules, setRules] = useState([]);
 
   const [showOptions, setShowOptions] = useState(null);
   const [showShareForm, setShowShareForm] = useState(false);
-
-
-  const [selectedFile, setSelectedFile] = useState(null);
+  const [multiSelectMode, setMultiSelectMode] = useState(false);
+  const [selectedFiles, setSelectedFiles] = useState([]);
   const [selectedReceivers, setSelectedReceivers] = useState([]);
   const [selectedDateTime, setSelectedDateTime] = useState("");
   const [selectedRules, setSelectedRules] = useState([]);
-
- 
 
   const optionsRef = useRef(null);
 
@@ -38,40 +31,54 @@ function AvailableFile() {
   // Fetch files data based on userId
   useEffect(() => {
     const fetchData = async () => {
-      if (!userId) return; 
+      if (!userId) return;
 
       try {
-        const filesResponse = await axios.post(`/api/file/allUserFiles/${userId}`);
+        const filesResponse = await axios.post(
+          `/api/file/allUserFiles/${userId}`
+        );
         if (filesResponse.data.data) {
           setFiles(filesResponse.data.data); // Update state with fetched files
-          console.log('Fetched files:', filesResponse.data.data);
         } else {
-          console.error('No files found in response.');
+          console.error("No files found in response.");
+        }
+
+        const receiversResponse = await axios.get("/api/file/getAllReceivers");
+        if (receiversResponse.data.data) {
+          setReceivers(
+            receiversResponse.data.data.map((receiver) => ({
+              value: receiver.user_id,
+              label: `${receiver.first_name} ${receiver.last_name}`,
+            }))
+          );
+        } else {
+          console.error("No receivers found in response.");
         }
       } catch (error) {
-        console.error("Error fetching files:", error);
+        console.error("Error fetching data:", error);
       }
     };
 
     fetchData();
   }, [userId]);
 
-  const openOptions = (index) => setShowOptions(index);
+  const openOptions = (index) => {
+    setShowOptions((prev) => (prev === index ? null : index));
+  };
   const closeOptions = () => setShowOptions(null);
 
-  const openShareForm = (file) => {
-    console.log(file)
-    setSelectedFile(file); // Store selected file data
-    setShowShareForm(true);
-    setShowOptions(null);
+  const toggleMultiSelectMode = () => {
+    setMultiSelectMode(!multiSelectMode);
+    setSelectedFiles([]); // Clear selected files when toggling mode
   };
 
-  const closeShareForm = () => {
-    setShowShareForm(false);
-    setSelectedFile(null);
+  const toggleFileSelection = (fileId) => {
+    setSelectedFiles((prev) =>
+      prev.includes(fileId)
+        ? prev.filter((file_id) => file_id !== fileId)
+        : [...prev, fileId]
+    );
   };
-
-
 
   const handleShare = async () => {
     try {
@@ -95,11 +102,57 @@ function AvailableFile() {
     }
   };
 
+  const handleFileUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+   
+    const formData = new FormData();
+    formData.append("file", file);
+   
+    try {
+      const response = await axios.post("/api/file/uploadFile", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+   
+      if (response.data.success) {
+        // alert("File uploaded successfully!");
+        const newFile = response.data.data;   
+   
+        setFiles((prev) => [...prev, newFile]); // Add the new file to the UI
+      } else {
+        console.error("Error uploading file:", response.data.message);
+        alert("Failed to upload file.");
+      }
+    } catch (error) {
+      console.error("Error uploading file:", error);
+      alert("Failed to upload file.");
+    }
+  };
+
+
+  const handleView = async (fileUrl) => {
+    try {
+      if (!fileUrl) {
+        throw new Error("File URL not found in response.");
+      }
+      window.open(fileUrl, "_blank"); // Open the file in a new tab
+    } catch (error) {
+      console.error("Error viewing file:", error.message || error);
+      alert("Failed to view the file. Please try again.");
+    }
+  };
+
+  // const handleViewGoogleDocFile = (fileUrl) => {
+  //   const googleViewerUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(
+  //     fileUrl
+  //   )}&embedded=true`;
+  //   window.open(googleViewerUrl, "_blank");
+  // };
+
+
+
+
   // Handle clicks outside of the options menu to close it
-
-
-
-
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (optionsRef.current && !optionsRef.current.contains(event.target)) {
@@ -114,48 +167,105 @@ function AvailableFile() {
     };
   }, []);
 
- 
-    return (
-    <div className="px-6 py-4 rounded-lg bg-cardColor">
-      <h2 className="text-center text-2xl font-bold mb-6 text-white">
+  return (
+    <div className="px-6 py-4 rounded-3xl bg-cardColor overflow-hidden min-h-screen">
+      <div className="flex justify-between items-center">
+      <h2 className="p-2 text-2xl font-bold mb-6 text-white">
         Available Files
       </h2>
+      <button className="px-4 py-2 rounded bg-green-500 text-white">
+          <label htmlFor="file-upload" className="cursor-pointer">
+            Add New File
+          </label>
+          <input
+          type="file"
+          id="file-upload"
+          className="hidden"
+          onChange={handleFileUpload}
+        />
+        </button>
+      </div>
+
+      <div className="mb-4 flex justify-between">
+        <button
+          onClick={toggleMultiSelectMode}
+          className={`px-4 py-2 rounded ${
+            multiSelectMode ? "bg-red-500" : "bg-blue-500"
+          } text-white`}
+        >
+          {multiSelectMode ? "Cancel Multi-Select" : "Enable Multi-Select"}
+        </button>
+        {multiSelectMode && (
+          <div className="flex gap-2">
+            <button
+              onClick={() => setShowShareForm(true)}
+              disabled={selectedFiles.length === 0}
+              className="px-4 py-2 rounded bg-green-500 text-white hover:bg-green-600"
+            >
+              Share Selected
+            </button>
+            <button
+              disabled={selectedFiles.length === 0}
+              className="px-4 py-2 rounded bg-red-500 text-white hover:bg-red-600"
+            >
+              Delete Selected
+            </button>
+          </div>
+        )}
+      </div>
 
       {/* File Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
         {files.map((file, index) => (
           <div
             key={index}
-            className="relative border rounded-lg shadow-md bg-gray-700 p-6 text-center hover:shadow-lg transition duration-300"
+            className={`relative border rounded-lg shadow-md bg-gray-700 p-6 text-center hover:shadow-lg transition duration-300 ${
+              selectedFiles.includes(file.file_id) ? "bg-blue-800" : ""
+            }`}
+            style={{ width: "200px", height: "100px" }}
           >
-            <div className="text-lg font-semibold text-white">{file.file_name}</div>
-            <button
-              onClick={() => openOptions(index)}
-              className="absolute top-2 right-2 text-white hover:text-gray-200"
+            {multiSelectMode && (
+              <input
+                type="checkbox"
+                checked={selectedFiles.includes(file.file_id)}
+                onChange={() => toggleFileSelection(file.file_id)}
+                className="absolute top-2 left-2 w-5 h-5"
+              />
+              
+            )}
+            <div
+              className="text-lg font-semibold text-white truncate overflow-hidden"
+              style={{ whiteSpace: "nowrap" }}
+              title={file.file_name}
             >
-              &#x22EE;
-            </button>
-            {showOptions === index && (
+              {file.file_name}
+            </div>
+            {!multiSelectMode && (
+              <button
+                onClick={() => openOptions(file.file_id)}
+                className="absolute top-2 right-2 text-white hover:text-gray-200"
+              >
+                &#x22EE;
+              </button>
+            )}
+            {showOptions === file.file_id && (
               <div
                 ref={optionsRef}
-                className="absolute top-10 right-2 bg-white border rounded-lg shadow-md z-50 "
+                className="absolute top-10 right-2 bg-white border rounded-lg shadow-md z-50 overflow-hidden "
               >
                 <button
-                  onClick={() => openShareForm(file)}
+                  onClick={() => setShowShareForm(true)}
                   className="block px-4 py-2 hover:bg-gray-100 w-full text-left text-green-500"
                 >
                   Share
                 </button>
                 <button
-                  onClick={closeOptions}
+                  onClick={() => handleView(file.file_url)} // Placeholder for view action
                   className="block px-4 py-2 hover:bg-gray-100 w-full text-left text-blue-500"
                 >
                   View
                 </button>
-                <button
-                  onClick={closeOptions}
-                  className="block px-4 py-2 hover:bg-gray-100 w-full text-left text-red-500"
-                >
+                <button className="block px-4 py-2 hover:bg-gray-100 w-full text-left text-red-500">
                   Delete
                 </button>
               </div>
@@ -165,7 +275,7 @@ function AvailableFile() {
       </div>
 
       {/* Share Form Modal */}
-      {showShareForm && selectedFile && (
+      {showShareForm && (
         <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
           <div className="bg-white p-6 rounded-lg w-full max-w-lg">
             <h3 className="text-lg font-semibold mb-4 text-gray-800 text-center">
@@ -211,7 +321,7 @@ function AvailableFile() {
                 Share
               </button>
               <button
-                onClick={closeShareForm}
+                onClick={() => setShowShareForm(false)}
                 className="px-4 py-2 rounded bg-red-500 text-white hover:bg-red-600"
               >
                 Cancel
@@ -222,7 +332,6 @@ function AvailableFile() {
       )}
     </div>
   );
-
 }
 
 export default AvailableFile;
