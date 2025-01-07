@@ -1,6 +1,7 @@
 import asyncHandler from "../utils/asyncHandler.js";
 import connectDB from "../db/db.js";
 import { uploadOnCloudinary } from "../utils/cloudinary.js"
+import {convertToIndianTime} from "../utils/dateTimeConverter.js"
 
 
 const uploadFile = asyncHandler(async (req, res) => {
@@ -32,7 +33,7 @@ const uploadFile = asyncHandler(async (req, res) => {
     try {
         const [insertResult] = await db.query(
             `
-            INSERT INTO files (user_id, file_url, file_name, file_size, resource_type, format, folder, created_at) 
+            INSERT INTO files (user_id, file_url, file_name, file_size, resource_type, format, folder) 
             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             `,
             [
@@ -43,7 +44,6 @@ const uploadFile = asyncHandler(async (req, res) => {
                 file.resource_type,
                 file.format,
                 file.cloudinaryFolder || folder,
-                file.created_at,
             ]
         );
 
@@ -156,51 +156,69 @@ const getAllReceivers = asyncHandler(async (req, res) => {
 const shareFile = asyncHandler(async (req, res) => {
     const db = await connectDB()
 
-    const {receiverid, file_url, file_name, file_size, resource_type} = req.body;
-    const format = null // verify it later work on file formate in later 
+    const { receiverids, file_url, file_name, file_size, resource_type } = req.body;
+    const sender_id = req.user.user_id;
+    const format = null; // To be handled later
+    const created_at = new Date().toISOString(); 
+    const updated_at = new Date().toISOString(); 
 
-    const folder = "IN"
-    if(!(receiverid &&  file_url && file_name && file_size &&  resource_type )){
+    const folder = "IN";
+
+    if (!(receiverids && file_url && file_name && file_size && resource_type)) {
         return res.status(400).json({
             status: false,
-            message: "All fileds are required"
-        })
+            message: "All fields are required"
+        });
     }
 
-    const [result] = await db.query(`
-            INSERT INTO files (user_id, file_url, file_name, file_size, resource_type, format, folder) 
-            VALUES (?, ?, ?, ?, ?, ?, ?)
-        `,
-        [   
-            receiverid,
-            file_url,
-            file_name,
-            file_size, // modify size of file later 
-            resource_type,
-            format,
-            folder,
-        ]
-    )
-
-    if(result.length == 0){
-        res.status(400).json({
-            status:false,
-            message:"Error while inserting data in database"
-        })
+    if (!Array.isArray(receiverids) || receiverids.length === 0) {
+        return res.status(400).json({
+            status: false,
+            message: "Receiver IDs must be an array and cannot be empty"
+        });
     }
 
-    return res.status(200).json({
-        success: true,
-        data: result[0],
-        message: "Data successfully inserted into database"
-    })
-})
+
+
+    const insertPromises = receiverids.map(receiverid => {
+        return db.query(
+            `INSERT INTO sharefiles (sender_id,user_id, file_url, file_name, file_size, resource_type, format, folder, created_at, updated_at) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [sender_id, receiverid, file_url, file_name, file_size, resource_type, format, folder, created_at, updated_at]
+        );
+    });
+
+    try {
+        // Execute all insertions in parallel
+        const results = await Promise.all(insertPromises);
+
+        // Check if all insertions were successful
+        if (results.some(result => result.length === 0)) {
+            return res.status(400).json({
+                status: false,
+                message: "Error while inserting data into database for one or more users"
+            });
+        }
+        console.log(results)
+        return res.status(200).json({
+            success: true,
+            message: `${receiverids.length} file(s) successfully shared`
+        });
+    } catch (error) {
+        return res.status(500).json({
+            status: false,
+            message: "Internal Server Error",
+            error: error.message
+        });
+    }
+});
+
 
 
 const getAllUserFilesToDownload = asyncHandler(async (req, res) => {
     const db = await connectDB();
     const userId = req.user.user_id;
-    const folder = "IN"
+    const folder = "IN"; // Assuming 'IN' is the folder you're interested in
 
     if (!userId) {
         return res.status(400).json({
@@ -212,12 +230,29 @@ const getAllUserFilesToDownload = asyncHandler(async (req, res) => {
     try {
         const [result] = await db.query(
             `
-            SELECT * FROM files 
-            WHERE user_id = ? AND folder = ?
+            SELECT 
+                id, 
+                sender_id,
+                user_id,
+                file_url,
+                file_size,
+                resource_type,
+                file_name, 
+                from_time, 
+                to_time, 
+            CASE 
+                WHEN (from_time IS NULL AND to_time IS NULL) THEN 'Available'
+                WHEN (NOW() < from_time) THEN 'Unavailable'
+                WHEN (NOW() > to_time) THEN 'Unavailable'
+                ELSE 'Available'
+            END AS status
+            FROM 
+            sharefiles
+            WHERE 
+            user_id = ? AND folder = ?;
             `,
-            [userId, folder]
-        );
-
+            [userId, folder])
+            
         if (!result.length) {
             return res.status(404).json({
                 success: false,
@@ -225,20 +260,36 @@ const getAllUserFilesToDownload = asyncHandler(async (req, res) => {
             });
         }
 
+        // Convert UTC times to IST for each file
+        const filesWithConvertedTimes = result.map(file => {
+            return {
+                ...file,
+                from_time: file.from_time ? convertToIndianTime(file.from_time) : null,
+                to_time: file.to_time ? convertToIndianTime(file.to_time) : null,
+            };
+        });
+
+
+
         return res.status(200).json({
             success: true,
-            data: result,
-            count: result.length,
+            data: filesWithConvertedTimes,
+            count: filesWithConvertedTimes.length,
             message: "All user files to download fetched successfully",
         });
+
+
+
+
     } catch (error) {
-        
         return res.status(500).json({
             success: false,
             message: "Error fetching user files.",
+            error: error.message,
         });
     }
 });
+
 
 export {
     uploadFile,
