@@ -1,74 +1,74 @@
 import asyncHandler from "../utils/asyncHandler.js";
 import connectDB from "../db/db.js";
 import { uploadOnCloudinary } from "../utils/cloudinary.js"
-import {convertToIndianTime} from "../utils/dateTimeConverter.js"
+import { convertToIndianTime } from "../utils/dateTimeConverter.js"
 
 
-const uploadFile = asyncHandler(async (req, res) => {
-
-    const db = await connectDB()
+const uploadFiles = asyncHandler(async (req, res) => {
+    const db = await connectDB();
     const userId = req.user.user_id;
-    // const LocalfilePath =  req.files?.file?.[0]?.path;  // if user directly send a file 
+    const files = req.files;
     const folder = "OUT";
-    const { localFilePath } = req.body;
+    const cloudinaryFolder = "Cloudinary_Bucket";
 
-    if (!localFilePath) {
+    if (!files || files.length === 0) {
         return res.status(400).json({
             success: false,
-            message: "File path is required. Ensure a file is uploaded.",
+            message: "At least one file is required. Ensure files are uploaded.",
         });
     }
 
-
-    const file = await uploadOnCloudinary(localFilePath, folder)
-
-    if (!file) {
-        return res.status(400).json({
-            success: false,
-            message: "Error while file uploading in  cloudinary "
-        })
-    }
-
-
     try {
-        const [insertResult] = await db.query(
-            `
-            INSERT INTO files (user_id, file_url, file_name, file_size, resource_type, format, folder) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            `,
-            [
-                userId,
-                file.url,
-                file.original_filename,
-                file.bytes, // modify size of file later 
-                file.resource_type,
-                file.format,
-                file.cloudinaryFolder || folder,
-            ]
-        );
+        const uploadedFiles = await Promise.all(
+            files.map(async (file) => {
+                const localFilePath = file.path;
 
-        const [savedFile] = await db.query(
-            `
-            SELECT * FROM files 
-            WHERE file_url = ?
-            `,
-            [file.url]
+                // Upload file to Cloudinary
+                const uploadedFile = await uploadOnCloudinary(localFilePath, cloudinaryFolder);
+                if (!uploadedFile) {
+                    throw new Error(`Error uploading file: ${file.originalname} to Cloudinary.`);
+                }
+
+                // Save file details in the database
+                await db.query(
+                    `
+                    INSERT INTO files (user_id, file_url, file_name, file_size, resource_type, format, folder, created_at, updated_at) 
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    `,
+                    [
+                        userId,
+                        uploadedFile.url,
+                        uploadedFile.original_filename,
+                        uploadedFile.bytes,
+                        uploadedFile.resource_type,
+                        uploadedFile.format,
+                        folder,
+                        new Date().toISOString(),
+                        new Date().toISOString(),
+                    ]
+                );
+
+                return {
+                    fileName: uploadedFile.original_filename,
+                    fileUrl: uploadedFile.url,
+                };
+            })
         );
 
         return res.status(200).json({
             success: true,
-            data: savedFile[0],
-            message: "File uploaded and data stored successfully.",
+            data: uploadedFiles,
+            message: `${uploadedFiles.length} file(s) uploaded and data stored successfully.`,
         });
-
     } catch (error) {
-        console.error("Database error:", error);
+        console.error("Database or Cloudinary error:", error);
         return res.status(500).json({
             success: false,
-            message: "Error storing file information in the database.",
+            message: "Error uploading files and storing information in the database.",
         });
     }
-})
+});
+
 
 
 const getAllUserFiles = asyncHandler(async (req, res) => {
@@ -159,8 +159,8 @@ const shareFile = asyncHandler(async (req, res) => {
     const { receiverids, file_url, file_name, file_size, resource_type } = req.body;
     const sender_id = req.user.user_id;
     const format = null; // To be handled later
-    const created_at = new Date().toISOString(); 
-    const updated_at = new Date().toISOString(); 
+    const created_at = new Date().toISOString();
+    const updated_at = new Date().toISOString();
 
     const folder = "IN";
 
@@ -199,7 +199,7 @@ const shareFile = asyncHandler(async (req, res) => {
                 message: "Error while inserting data into database for one or more users"
             });
         }
-        
+
         return res.status(200).json({
             success: true,
             message: `${receiverids.length} file(s) successfully shared`
@@ -292,7 +292,7 @@ const getAllUserFilesToDownload = asyncHandler(async (req, res) => {
 
 
 export {
-    uploadFile,
+    uploadFiles,
     getAllUserFiles,
     getAllReceivers,
     shareFile,
