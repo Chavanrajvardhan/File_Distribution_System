@@ -1,0 +1,119 @@
+const viewFile = asyncHandler(async (req, res) => {
+    const db = await connectDB();
+    const { file_id } = req.body;
+
+    try {
+        // Fetch file details from the database
+        const [fileDetails] = await db.query(
+            `SELECT file_url FROM files WHERE file_id = ?`,
+            [file_id]
+        );
+
+        // Log the raw database response for debugging
+        console.log("Raw File Details:", fileDetails);
+
+        // Check if the file exists
+        if (!fileDetails || fileDetails.length === 0) {
+            return res.status(404).json({ message: "File not found." });
+        }
+
+        // Extract file_url from the query result
+        const file_url = fileDetails[0]?.file_url;
+
+        if (!file_url) {
+            return res.status(500).json({ message: "File URL not found in the response." });
+        }
+
+        // Assign file_url to file_path
+        const file_path = file_url;
+
+        console.log("File Path:", file_path); // Debugging the final value
+
+        // Respond with the file path
+        return res.status(200).json({ fileUrl: file_path });
+    } catch (error) {
+        console.error("Error fetching file URL:", error);
+        return res.status(500).json({ message: "Internal server error." });
+    }
+});
+
+
+
+const viewFile = asyncHandler(async (req, res) => {
+    const db = await connectDB();
+    const { file_id } = req.body;
+
+    try {
+        // Fetch file details from the database
+        const [fileDetails] = await db.query(
+            `SELECT file_url FROM files WHERE file_id = ?`,
+            [file_id]
+        );
+
+        // Log the raw database response for debugging
+        console.log("Raw File Details:", fileDetails);
+
+        // Check if the file exists
+        if (!fileDetails || fileDetails.length === 0) {
+            return res.status(404).json({ message: "File not found." });
+        }
+
+        // Extract file_url from the query result
+        const file_url = fileDetails[0]?.file_url;
+
+        if (!file_url) {
+            return res.status(500).json({ message: "File URL not found in the response." });
+        }
+
+        // Assign file_url to file_path
+        const file_path = file_url;
+
+        console.log("File Path:", file_path); // Debugging the final value
+
+        // Respond with the file path
+        return res.status(200).json({ fileUrl: file_path });
+    } catch (error) {
+        console.error("Error fetching file URL:", error);
+        return res.status(500).json({ message: "Internal server error." });
+    }
+});
+
+
+
+<Multiselect
+                    options={fileTypes}
+                    isObject={false}
+                    selectedValues={formData.fileType} // Ensure this aligns with the format of `fileTypes`
+                    placeholder="Select File Type"
+                    onSelect={(selectedList) => {
+                      setFormData({ ...formData, fileType: selectedList });
+                    }}
+                    onRemove={(selectedList) => {
+                      setFormData({ ...formData, fileType: selectedList });
+                    }}
+                    style={{
+                      chips: { background: "#3B82F6" },
+                      multiselectContainer: { color: "#000" },
+                      searchBox: { background: "#374151" },
+                    }}
+                  />
+
+<Multiselect
+                    options={receiversList}
+                    isObject={false}
+                    selectedValues={formData.recipients} // Ensure this aligns with the format of `receiversList`
+                    placeholder="Select Recipients"
+                    onSelect={(selectedList) => {
+                      setFormData({ ...formData, recipients: selectedList });
+                    }}
+                    onRemove={(selectedList) => {
+                      setFormData({ ...formData, recipients: selectedList });
+                    }}
+                    style={{
+                      chips: { background: "#3B82F6" },
+                      multiselectContainer: { color: "#000" },
+                      searchBox: { background: "#374151" },
+                    }}
+                  />
+
+
