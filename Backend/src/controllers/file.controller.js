@@ -199,7 +199,7 @@ const shareFile = asyncHandler(async (req, res) => {
                 message: "Error while inserting data into database for one or more users"
             });
         }
-        console.log(results)
+        
         return res.status(200).json({
             success: true,
             message: `${receiverids.length} file(s) successfully shared`
@@ -252,7 +252,7 @@ const getAllUserFilesToDownload = asyncHandler(async (req, res) => {
             user_id = ? AND folder = ?;
             `,
             [userId, folder])
-            
+
         if (!result.length) {
             return res.status(404).json({
                 success: false,
