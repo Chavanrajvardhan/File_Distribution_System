@@ -132,7 +132,7 @@ const getAllReceivers = asyncHandler(async (req, res) => {
                     role, 
                     created_at 
                 FROM ${dbName}.users
-                WHERE role = 'reciver'   
+                WHERE role = 'receiver'|| 'senderreceiver'   
             `);// change speling mistake here and user controller
 
     if (result.length === 0) {
