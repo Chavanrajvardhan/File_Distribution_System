@@ -242,9 +242,10 @@ const getAllUserFilesToDownload = asyncHandler(async (req, res) => {
                 to_time, 
             CASE 
                 WHEN (from_time IS NULL AND to_time IS NULL) THEN 'Available'
-                WHEN (NOW() < from_time) THEN 'Unavailable'
-                WHEN (NOW() > to_time) THEN 'Unavailable'
-                ELSE 'Available'
+                WHEN (UTC_TIMESTAMP() < from_time) THEN 'Unavailable'
+                WHEN (UTC_TIMESTAMP() BETWEEN from_time AND to_time) THEN 'Available'
+                WHEN (UTC_TIMESTAMP() > to_time) THEN 'Unavailable'
+                ELSE 'Unavailable'
             END AS status
             FROM 
             sharefiles
