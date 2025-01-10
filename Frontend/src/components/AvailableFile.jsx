@@ -7,10 +7,8 @@ function AvailableFile() {
   const { userRole, user } = useAuth();
   const [userId, setUserId] = useState(null);
   const [files, setFiles] = useState([]);
-
   const [receivers, setReceivers] = useState([]);
   const [rules, setRules] = useState([]);
-
   const [showOptions, setShowOptions] = useState(null);
   const [showShareForm, setShowShareForm] = useState(false);
   const [multiSelectMode, setMultiSelectMode] = useState(false);
@@ -80,55 +78,35 @@ function AvailableFile() {
     );
   };
 
-  const handleShare = async () => {
-    try {
-      const shareData = {
-        receivers: selectedReceivers.map((r) => r.value),
-        dateTime: selectedDateTime,
-        rules: selectedRules.map((r) => r.value),
-        file_name: selectedFile.name,
-        file_url: selectedFile.url,
-        file_size: selectedFile.size,
-        resource_type: selectedFile.type,
-        format: selectedFile.format,
-      };
-
-      await axios.post("/api/file/shareFile", shareData);
-      alert("File shared successfully!");
-      closeShareForm();
-    } catch (error) {
-      console.error("Error sharing file:", error);
-      alert("Failed to share file.");
-    }
-  };
-
   const handleFileUpload = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-   
+    const selectedFiles = e.target.files;
+
+    if (!selectedFiles.length) {
+      return; // No files selected
+    }
+
     const formData = new FormData();
-    formData.append("file", file);
-   
+    for (const file of selectedFiles) {
+      formData.append("file", file);
+    }
+
     try {
       const response = await axios.post("/api/file/uploadFile", formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
-   
+
       if (response.data.success) {
-        // alert("File uploaded successfully!");
-        const newFile = response.data.data;   
-   
-        setFiles((prev) => [...prev, newFile]); // Add the new file to the UI
+        const newFiles = response.data.data; // Assuming response returns an array of uploaded files
+        setFiles((prev) => [...prev, ...newFiles.map((file) => file.data)]); // Add new files to the UI
       } else {
-        console.error("Error uploading file:", response.data.message);
-        alert("Failed to upload file.");
+        console.error("Error uploading files:", response.data.message);
+        alert("Failed to upload files.");
       }
     } catch (error) {
-      console.error("Error uploading file:", error);
-      alert("Failed to upload file.");
+      console.error("Error uploading files:", error);
+      alert("Failed to upload files.");
     }
   };
-
 
   const handleView = async (fileUrl) => {
     try {
@@ -149,8 +127,60 @@ function AvailableFile() {
   //   window.open(googleViewerUrl, "_blank");
   // };
 
+  const handleDelete = async (fileId = null) => {
+    if (!userId) {
+      alert("User not found.");
+      return;
+    }
 
+    try {
+      let fileIdsToDelete = [];
 
+      // If multi-select mode is on, delete selected files
+      if (multiSelectMode) {
+        if (selectedFiles.length === 0) {
+          alert("No files selected for deletion.");
+          return;
+        }
+        fileIdsToDelete = selectedFiles;
+      }
+      // If multi-select mode is off, delete the single file
+      else if (fileId) {
+        fileIdsToDelete = [fileId];
+      } else {
+        alert("File not found for deletion.");
+        return;
+      }
+
+      // Join file IDs into a comma-separated string for the backend
+      const fileIdsString = fileIdsToDelete.join(",");
+
+      // Send delete request to the backend
+      const response = await axios.post(
+        `/api/file/deleteFile/${fileIdsString}`
+      );
+
+      if (response.data.success) {
+        alert("File(s) deleted successfully!");
+
+        // Remove deleted files from UI
+        setFiles((prev) =>
+          prev.filter((file) => !fileIdsToDelete.includes(file.file_id))
+        );
+
+        // Clear selected files if in multi-select mode
+        if (multiSelectMode) {
+          setSelectedFiles([]);
+        }
+      } else {
+        console.error("Error deleting file(s):", response.data.message);
+        alert("Failed to delete file(s).");
+      }
+    } catch (error) {
+      console.error("Error deleting file(s):", error);
+      alert("Failed to delete file(s).");
+    }
+  };
 
   // Handle clicks outside of the options menu to close it
   useEffect(() => {
@@ -170,31 +200,34 @@ function AvailableFile() {
   return (
     <div className="px-6 py-4 rounded-3xl bg-cardColor overflow-hidden min-h-screen">
       <div className="flex justify-between items-center">
-      <h2 className="p-2 text-2xl font-bold mb-6 text-white">
-        Available Files
-      </h2>
-      <button className="px-4 py-2 rounded bg-green-500 text-white">
+        <h2 className="p-2 text-2xl font-bold mb-6 text-white">
+          Available Files
+        </h2>
+        <button className="px-4 py-2 rounded bg-green-500 text-white">
           <label htmlFor="file-upload" className="cursor-pointer">
             Add New File
           </label>
           <input
-          type="file"
-          id="file-upload"
-          className="hidden"
-          onChange={handleFileUpload}
-        />
+            type="file"
+            id="file-upload"
+            className="hidden"
+            onChange={handleFileUpload}
+            multiple // Add the 'multiple' attribute
+          />
         </button>
       </div>
 
       <div className="mb-4 flex justify-between">
-        <button
-          onClick={toggleMultiSelectMode}
-          className={`px-4 py-2 rounded ${
-            multiSelectMode ? "bg-red-500" : "bg-blue-500"
-          } text-white`}
-        >
-          {multiSelectMode ? "Cancel Multi-Select" : "Enable Multi-Select"}
-        </button>
+        {files.length > 1 && (
+          <button
+            onClick={toggleMultiSelectMode}
+            className={`px-4 py-2 rounded ${
+              multiSelectMode ? "bg-red-500" : "bg-blue-500"
+            } text-white`}
+          >
+            {multiSelectMode ? "Cancel Multi-Select" : "Enable Multi-Select"}
+          </button>
+        )}
         {multiSelectMode && (
           <div className="flex gap-2">
             <button
@@ -205,6 +238,7 @@ function AvailableFile() {
               Share Selected
             </button>
             <button
+              onClick={() => handleDelete()}
               disabled={selectedFiles.length === 0}
               className="px-4 py-2 rounded bg-red-500 text-white hover:bg-red-600"
             >
@@ -214,65 +248,71 @@ function AvailableFile() {
         )}
       </div>
 
-      {/* File Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-        {files.map((file, index) => (
-          <div
-            key={index}
-            className={`relative border rounded-lg shadow-md bg-gray-700 p-6 text-center hover:shadow-lg transition duration-300 ${
-              selectedFiles.includes(file.file_id) ? "bg-blue-800" : ""
-            }`}
-            style={{ width: "200px", height: "100px" }}
-          >
-            {multiSelectMode && (
-              <input
-                type="checkbox"
-                checked={selectedFiles.includes(file.file_id)}
-                onChange={() => toggleFileSelection(file.file_id)}
-                className="absolute top-2 left-2 w-5 h-5"
-              />
-              
-            )}
+      {/* grid */}
+      {files.length > 0 ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+          {files.map((file, index) => (
             <div
-              className="text-lg font-semibold text-white truncate overflow-hidden"
-              style={{ whiteSpace: "nowrap" }}
-              title={file.file_name}
+              key={index}
+              className={`relative border rounded-lg shadow-md bg-gray-700 p-8 text-center hover:shadow-lg transition duration-300 ${
+                selectedFiles.includes(file.file_id) ? "bg-blue-800" : ""
+              }`}
+              style={{ width: "200px", height: "100px" }}
             >
-              {file.file_name}
-            </div>
-            {!multiSelectMode && (
-              <button
-                onClick={() => openOptions(file.file_id)}
-                className="absolute top-2 right-2 text-white hover:text-gray-200"
-              >
-                &#x22EE;
-              </button>
-            )}
-            {showOptions === file.file_id && (
+              {multiSelectMode && (
+                <input
+                  type="checkbox"
+                  checked={selectedFiles.includes(file.file_id)}
+                  onChange={() => toggleFileSelection(file.file_id)}
+                  className="absolute top-2 left-2 w-5 h-5"
+                />
+              )}
               <div
-                ref={optionsRef}
-                className="absolute top-10 right-2 bg-white border rounded-lg shadow-md z-50 overflow-hidden "
+                className="text-lg font-semibold text-white truncate overflow-hidden"
+                style={{ whiteSpace: "nowrap" }}
+                title={file.file_name}
               >
-                <button
-                  onClick={() => setShowShareForm(true)}
-                  className="block px-4 py-2 hover:bg-gray-100 w-full text-left text-green-500"
-                >
-                  Share
-                </button>
-                <button
-                  onClick={() => handleView(file.file_url)} // Placeholder for view action
-                  className="block px-4 py-2 hover:bg-gray-100 w-full text-left text-blue-500"
-                >
-                  View
-                </button>
-                <button className="block px-4 py-2 hover:bg-gray-100 w-full text-left text-red-500">
-                  Delete
-                </button>
+                {file.file_name}
               </div>
-            )}
-          </div>
-        ))}
-      </div>
+              {!multiSelectMode && (
+                <button
+                  onClick={() => openOptions(file.file_id)}
+                  className="absolute top-2 right-2 text-white hover:text-gray-200"
+                >
+                  &#x22EE;
+                </button>
+              )}
+              {showOptions === file.file_id && (
+                <div
+                  ref={optionsRef}
+                  className="absolute top-10 right-2 bg-white border rounded-lg shadow-md z-50 overflow-hidden "
+                >
+                  <button
+                    onClick={() => setShowShareForm(true)}
+                    className="block px-4 py-2 hover:bg-gray-100 w-full text-left text-green-500"
+                  >
+                    Share
+                  </button>
+                  <button
+                    onClick={() => handleView(file.file_url)} // Placeholder for view action
+                    className="block px-4 py-2 hover:bg-gray-100 w-full text-left text-blue-500"
+                  >
+                    View
+                  </button>
+                  <button
+                    className="block px-4 py-2 hover:bg-gray-100 w-full text-left text-red-500"
+                    onClick={() => handleDelete(file.file_id)}
+                  >
+                    Delete
+                  </button>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="text-gray-400 text-center mt-8">No files found.</div>
+      )}
 
       {/* Share Form Modal */}
       {showShareForm && (
@@ -315,7 +355,7 @@ function AvailableFile() {
             {/* Form Footer */}
             <div className="flex justify-between mt-6">
               <button
-                onClick={handleShare}
+                // onClick={handleShare}
                 className="px-4 py-2 rounded bg-green-500 text-white hover:bg-green-600"
               >
                 Share
