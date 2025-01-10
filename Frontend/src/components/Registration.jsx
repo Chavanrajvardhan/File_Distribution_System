@@ -1,215 +1,7 @@
-// import React, { useState } from "react";
-// import axios from "axios";
-// import { useNavigate } from "react-router-dom";
-
-// /*const Registration = () => {
-//   const [formData, setFormData] = useState({
-//     first_name: "",
-//     middle_name: "",
-//     last_name: "",
-//     email: "",
-//     role: "",
-//     center_id: "",
-//     pc_id: "",
-//     password: "",
-//   });
-
-//   const navigate = useNavigate();
-
-//   const handleInputChange = (e) => {
-//     const { name, value } = e.target;
-//     setFormData({ ...formData, [name]: value });
-//   };
-
-
-//   const handleSubmit = async (e) => {
-
-//     e.preventDefault();
-
-//     console.log(formData)
-//     console.log(setFormData)
-//     try {
-//       const response = await axios.post(
-//         "/api/users/register",
-//         formData,
-//         formData,
-//         { headers: { "Content-Type": "application/json" } }
-//       );
-//       alert(response.data.message || "Registration successful!");
-//       navigate("/");
-//     } catch (error) {
-//       alert(error.response?.data?.message || "Something went wrong!");
-//     }
-//   };
-
-//   return (
-//     <div className="bg-customDark h-screen flex flex-col justify-center items-center">
-//       <div className="max-w-lg mx-auto mt-6 p-6 bg-cardColor border border-white-300 rounded-lg shadow-md">
-//       <h2 className="text-2xl font-semibold text-white text-center mb-4">User Registration</h2>
-//       <form onSubmit={handleSubmit} className="space-y-4">
-//         // { Name Section }
-//         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-//           <input
-//             type="text"
-//             name="first_name"
-//             placeholder="First Name"
-//             required
-//             value={formData.first_name}
-//             onChange={handleInputChange}
-//             className="p-2 border border-white rounded w-full focus:outline-none focus:ring focus:ring-blue-300"
-//           />
-//           <input
-//             type="text"
-//             name="middle_name"
-//             placeholder="Middle Name"
-//             value={formData.middle_name}
-//             onChange={handleInputChange}
-//             className="p-2 border border-white rounded w-full focus:outline-none focus:ring focus:ring-blue-300"
-//           />
-//           <input
-//             type="text"
-//             name="last_name"
-//             placeholder="Last Name"
-//             required
-//             value={formData.last_name}
-//             onChange={handleInputChange}
-//             className="p-2 border border-white rounded w-full focus:outline-none focus:ring focus:ring-blue-300"
-//           />
-//         </div>
-
-//         {/* Email */}
-//         <input
-//           type="email"
-//           name="email"
-//           placeholder="Email"
-//           required
-//           value={formData.email}
-//           onChange={handleInputChange}
-//           className="p-2 border border-white rounded w-full focus:outline-none focus:ring focus:ring-blue-300"
-//         />
-
-//         {/* Role */}
-//         <div className="flex gap-7 item-center">
-//           <label className=" text-md font-medium text-white">Role  :</label>
-//           <div className="flex gap-4">
-//             <label className="flex items-center text-white">
-//               <input
-//                 type="radio"
-//                 name="role"
-//                 value="Sender"
-//                 checked={formData.role === "Sender"}
-//                 onChange={handleInputChange}
-//                 className="mr-2"
-//               />
-//               Sender
-//             </label>
-//             <label className="flex items-center text-white">
-//               <input
-//                 type="radio"
-//                 name="role"
-//                 value="Receiver"
-//                 checked={formData.role === "Receiver"}
-//                 onChange={handleInputChange}
-//                 className="mr-2"
-//               />
-//               Receiver
-//             </label>
-//             <label className="flex items-center text-white">
-//               <input
-//                 type="radio"
-//                 name="role"
-//                 value="SenderReceiver"
-//                 checked={formData.role === "SenderReceiver"}
-//                 onChange={handleInputChange}
-//                 className="mr-2"
-//               />
-//               Sender & Receiver
-//             </label>
-//           </div>
-//         </div>
-
-//         {/* Center ID */}
-//         <input
-//           type="text"
-//           name="center_id"
-//           placeholder="Center ID"
-//           required
-//           value={formData.centerId}
-//           onChange={handleInputChange}
-//           className="p-2 border border-gray-300 rounded w-full focus:outline-none focus:ring focus:ring-blue-300"
-//         />
-
-//         {/* PC ID */}
-//         <input
-//           type="text"
-//           name="pc_id"
-//           placeholder="PC ID"
-//           required
-//           value={formData.pcId}
-//           onChange={handleInputChange}
-//           className="p-2 border border-gray-300 rounded w-full focus:outline-none focus:ring focus:ring-blue-300"
-//         />
-
-//         {/* Password */}
-//         <input
-//           type="password"
-//           name="password"
-//           placeholder="Password"
-//           required
-//           value={formData.password}
-//           onChange={handleInputChange}
-//           className="p-2 border border-gray-300 rounded w-full focus:outline-none focus:ring focus:ring-blue-300"
-//         />
-
-//         {/* Buttons */}
-//         <div className="flex justify-center gap-9 items-center">
-//           <button
-//             type="submit"
-//             className="px-4 py-2 bg-orange-500 text-white rounded hover:bg-orange-600"
-//           >
-//             Register
-//           </button>
-//           <button
-//             type="button"
-//             onClick={() =>
-//               setFormData({
-//                 first_name: "",
-//                 middle_name: "",
-//                 last_name: "",
-//                 email: "",
-//                 role: "",
-//                 center_id: "",
-//                 pc_id: "",
-//                 password: "",
-//               })
-//             }
-//             className="px-6 py-2 bg-blue-100 text-blue-700 hover:bg-blue-200 rounded"
-//           >
-//             Clear
-//           </button>
-//         </div>
-//       </form>
-//       <p className="text-center mt-4 text-white">
-//         Already have an account?{" "}
-//         <button
-//           onClick={() => navigate("/login")}
-//           className="text-orange-500 hover:underline"
-//         >
-//           Login
-//         </button>
-//       </p>
-//     </div>
-//     </div>
-//   );
-// };
-
-// export default Registration;
-
-
 import React, { useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
- 
+
 const Registration = () => {
   const [formData, setFormData] = useState({
     first_name: "",
@@ -221,22 +13,22 @@ const Registration = () => {
     pc_id: "",
     password: "",
   });
- 
+
   const [errors, setErrors] = useState({});
   const navigate = useNavigate();
- 
+
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData({ ...formData, [name]: value });
- 
+
     // Clear the error for the field being updated
     setErrors((prevErrors) => ({ ...prevErrors, [name]: "" }));
   };
- 
+
   const validateInputs = () => {
     let valid = true;
     const newErrors = {};
- 
+
     // Name validations
     if (!formData.first_name) {
       newErrors.first_name = "First name is required.";
@@ -250,7 +42,7 @@ const Registration = () => {
       newErrors.last_name = "Last name is required.";
       valid = false;
     }
- 
+
     // Email validation
     if (!formData.email) {
       newErrors.email = "Email is required.";
@@ -259,7 +51,7 @@ const Registration = () => {
       newErrors.email = "Please enter a valid email address.";
       valid = false;
     }
- 
+
     // Password validation
     if (!formData.password) {
       newErrors.password = "Password is required.";
@@ -273,7 +65,7 @@ const Registration = () => {
         "Password must be at least 8 characters, alphanumeric, and include one special character.";
       valid = false;
     }
- 
+
     // Center ID validation
     if (!formData.center_id) {
       newErrors.center_id = "Center ID is required.";
@@ -282,7 +74,7 @@ const Registration = () => {
       newErrors.center_id = "Center ID must be alphanumeric.";
       valid = false;
     }
- 
+
     // PC ID validation
     if (!formData.pc_id) {
       newErrors.pc_id = "PC ID is required.";
@@ -291,20 +83,20 @@ const Registration = () => {
       newErrors.pc_id = "PC ID must be alphanumeric.";
       valid = false;
     }
- 
+
     setErrors(newErrors);
     return valid;
   };
- 
+
   const capitalizeName = (name) => {
     return name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();
   };
- 
+
   const handleSubmit = async (e) => {
     e.preventDefault();
- 
+
     if (!validateInputs()) return;
- 
+
     const formattedData = {
       ...formData,
       first_name: capitalizeName(formData.first_name),
@@ -313,20 +105,18 @@ const Registration = () => {
         : "",
       last_name: capitalizeName(formData.last_name),
     };
- 
+
     try {
-      const response = await axios.post(
-        "/api/users/register",
-        formattedData,
-        { headers: { "Content-Type": "application/json" } }
-      );
+      const response = await axios.post("/api/users/register", formattedData, {
+        headers: { "Content-Type": "application/json" },
+      });
       alert(response.data.message || "Registration successful!");
       navigate("/");
     } catch (error) {
       alert(error.response?.data?.message || "Something went wrong!");
     }
   };
- 
+
   return (
     <div className="bg-customDark h-screen flex flex-col justify-center items-center">
       <div className="max-w-lg mx-auto mt-6 p-6 bg-cardColor border border-white-300 rounded-lg shadow-md">
@@ -341,11 +131,9 @@ const Registration = () => {
                 <input
                   type="text"
                   name={field}
-                  placeholder={
-                    field.replace("_", " ").replace(/^\w/, (c) =>
-                      c.toUpperCase()
-                    )
-                  }
+                  placeholder={field
+                    .replace("_", " ")
+                    .replace(/^\w/, (c) => c.toUpperCase())}
                   value={formData[field]}
                   onChange={handleInputChange}
                   className="p-2 border border-gray-300 rounded w-full focus:outline-none focus:ring focus:ring-blue-300"
@@ -356,7 +144,7 @@ const Registration = () => {
               </div>
             ))}
           </div>
- 
+
           {/* Email */}
           <div>
             <input
@@ -371,7 +159,7 @@ const Registration = () => {
               <p className="text-red-500 text-sm">{errors.email}</p>
             )}
           </div>
- 
+
           {/* Role */}
           <div>
             <label className="text-md font-medium text-white">Role:</label>
@@ -394,7 +182,7 @@ const Registration = () => {
               <p className="text-red-500 text-sm">{errors.role}</p>
             )}
           </div>
- 
+
           {/* Center ID */}
           <div>
             <input
@@ -409,7 +197,7 @@ const Registration = () => {
               <p className="text-red-500 text-sm">{errors.center_id}</p>
             )}
           </div>
- 
+
           {/* PC ID */}
           <div>
             <input
@@ -424,7 +212,7 @@ const Registration = () => {
               <p className="text-red-500 text-sm">{errors.pc_id}</p>
             )}
           </div>
- 
+
           {/* Password */}
           <div>
             <input
@@ -439,7 +227,7 @@ const Registration = () => {
               <p className="text-red-500 text-sm">{errors.password}</p>
             )}
           </div>
- 
+
           {/* Buttons */}
           <div className="flex justify-center gap-4 items-center">
             <button
@@ -471,7 +259,7 @@ const Registration = () => {
         <p className="text-center mt-4 text-white">
           Already have an account?{" "}
           <button
-            onClick={() => navigate("/login")}
+            onClick={() => navigate("/")}
             className="text-orange-500 hover:underline"
           >
             Login
@@ -481,5 +269,5 @@ const Registration = () => {
     </div>
   );
 };
- 
+
 export default Registration;
