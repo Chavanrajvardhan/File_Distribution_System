@@ -70,11 +70,14 @@ const registerUser = asyncHandler(async (req, res) => {
     const saltRound = 10;
     const hash_password = await bcrypt.hash(password, saltRound)
 
-
+    const created_at = new Date().toISOString(); 
+    const updated_at = new Date().toISOString(); 
+    
     const [user] = await db.query(
-        "INSERT INTO users (first_name, middle_name,last_name, email, password,role, center_id, pc_id) values(?, ?, ?, ?, ?, ?, ?, ?)",
-        [first_name, middle_name, last_name, email, hash_password, role, center_id, pc_id]
+        "INSERT INTO users (first_name, middle_name, last_name, email, password, role, center_id, pc_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        [first_name, middle_name, last_name, email, hash_password, role, center_id, pc_id, created_at, updated_at]
     );
+    
 
     if (!user) {
         return res.status(500).json({

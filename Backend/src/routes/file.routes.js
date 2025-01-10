@@ -1,7 +1,7 @@
 import { Router } from 'express';
 
 import {
-    uploadFile,
+    uploadFiles,
     getAllUserFiles,
     getAllReceivers,
     shareFile,
@@ -20,12 +20,9 @@ const router = Router()
 router.use(verifyJWT); // applay verify jwt for all routes
 
 router.route("/uploadFile").post(
-    upload.fields([{
-        name: "file",
-        maxCount: 1
-    }]),             //if we accept dirct file 
-    uploadFile
-)
+    upload.array("file", 25), // Accept up to 25 files for the "file" field
+    uploadFiles
+);
 
 router.route("/allUserFiles/:userId").post(getAllUserFiles)
 router.route("/getAllReceivers").get(getAllReceivers)
