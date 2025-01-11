@@ -99,4 +99,61 @@ const shareWithTimeBoundRule = asyncHandler(async (req, res) => {
     }
 });
 
-export { shareWithTimeBoundRule };
+
+const scheduleFilesToShare = asyncHandler(async (req, res) => {
+    const db = connectDB()
+
+    const sender_id = req.user.user_id;
+    const { receiver_ids, file_url, file_name, file_size, resource_type, schedule_time } = req.body;
+
+    // Validate inputs
+    if (!(sender_id || Array.isArray(receiver_ids) || receiver_ids.length === 0 || file_url || file_name || file_size || resource_type || schedule_time)) {
+        return res.status(400).json({
+            success: false,
+            message: "All fields are required, and receiver_ids must be a non-empty array."
+        });
+    }
+
+    try {
+
+        const created_at = new Date().toISOString()
+        const updated_at = new Date().toISOString()
+
+
+        // Insert a task for each receiver
+        const insertPromises = receiver_ids.map((receiver_id) =>
+            db.query(
+                `INSERT INTO scheduled_tasks 
+                 (sender_id, receiver_id, file_url, file_name, file_size, resource_type, schedule_time, created_at, updated_at) 
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                [
+                    sender_id,
+                    receiver_id,
+                    file_url,
+                    file_name,
+                    file_size,
+                    resource_type,
+                    schedule_time,
+                    created_at,
+                    updated_at,
+                ]
+            )
+        );
+
+        // Execute all insertions in parallel
+        await Promise.all(insertPromises);
+
+        res.status(201).json({
+            success: true,
+            message: `${receiver_ids.length} task(s) scheduled successfully.`,
+        });
+    } catch (error) {
+        console.error("Error scheduling tasks:", error.message);
+        res.status(500).json({ success: false, message: "Error scheduling tasks.", error: error.message });
+    }
+})
+
+export { 
+    shareWithTimeBoundRule,
+    scheduleFilesToShare
+ };
