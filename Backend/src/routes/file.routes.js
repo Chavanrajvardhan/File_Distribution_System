@@ -5,7 +5,14 @@ import {
     getAllUserFiles,
     getAllReceivers,
     shareFile,
-    getAllUserFilesToDownload
+    getAllUserFilesToDownload,
+    deleteFile,
+    getAllDeletedFiles,
+    RestoreFile,
+    permanentDeleteFile,
+    getFileStatus,
+
+    // getFileStatus,
 } from "../controllers/file.controller.js"
 
 import { verifyJWT } from "../middlwares/auth.middleware.js";
@@ -22,6 +29,17 @@ router.route("/uploadFile").post(
 router.route("/allUserFiles/:userId").post(getAllUserFiles)
 router.route("/getAllReceivers").get(getAllReceivers)
 router.route("/shareFile").post(shareFile);
-router.route("/availabeToDownload").post(getAllUserFilesToDownload);
+router.route("/availableToDownload").post(getAllUserFilesToDownload);
+router.route("/deleteFile/:fileIds").post(deleteFile);
+router.route("/RestoreFile/:fileId").post(RestoreFile);
+router.route("/permanentDelete/:fileId").delete(permanentDeleteFile);
+router.route("/allDeletedFiles/:userId").get(getAllDeletedFiles);
+router.route("/fileStatus").get(getFileStatus);
+
+
+
+// router.route("/filestats").get(getFileStatus);
+
+
 
 export default router;
