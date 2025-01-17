@@ -16,9 +16,17 @@ function AvailableFile() {
   const [selectedReceivers, setSelectedReceivers] = useState([]);
   const [selectedDateTime, setSelectedDateTime] = useState("");
   const [selectedRules, setSelectedRules] = useState([]);
+  const [availability, setAvailability] = useState({
+    fromTime: "",
+    toTime: "",
+  });
+  const [errors, setErrors] = useState("");
+  const [showAvailability, setShowAvailability] = useState(false);
 
   const optionsRef = useRef(null);
 
+  // console.log(availability.fromTime, availability.toTime);
+  // console.log(selectedDateTime);
   // Set userId when user is available
   useEffect(() => {
     if (user) {
@@ -73,7 +81,7 @@ function AvailableFile() {
   const toggleFileSelection = (fileId) => {
     setSelectedFiles((prev) =>
       prev.includes(fileId)
-        ? prev.filter((file_id) => file_id !== fileId)
+        ? prev.filter((id) => id !== fileId)
         : [...prev, fileId]
     );
   };
@@ -182,6 +190,171 @@ function AvailableFile() {
     }
   };
 
+  const handleShare = async () => {
+    if (!availability.fromTime && !availability.toTime && !selectedDateTime) {
+      // Check if all required fields are provided
+      if (!selectedReceivers.length || !selectedFiles.length) {
+        // alert("Please select at least one file and one receiver.");
+        setErrors("Please select at least one file and one receiver.");
+        return;
+      }
+
+      // Prepare the data to be shared
+      const filesToShare = multiSelectMode ? selectedFiles : [selectedFiles[0]]; // Single file if not in multi-select mode
+
+      const receiverIds = selectedReceivers.map((receiver) => receiver.value);
+
+      try {
+        // Make the API request to share files
+        const response = await axios.post("/api/file/shareFile", {
+          receiverids: receiverIds,
+          file_url: filesToShare.map((fileId) => {
+            const file = files.find((f) => f.file_id === fileId);
+            return file.file_url;
+          }),
+          file_name: filesToShare.map((fileId) => {
+            const file = files.find((f) => f.file_id === fileId);
+            return file.file_name;
+          }),
+          file_size: filesToShare.map((fileId) => {
+            const file = files.find((f) => f.file_id === fileId);
+            return file.file_size;
+          }),
+          resource_type: filesToShare.map((fileId) => {
+            const file = files.find((f) => f.file_id === fileId);
+            return file.resource_type || "unknown";
+          }),
+          format: filesToShare.map((fileId) => {
+            const file = files.find((f) => f.file_id === fileId);
+            return file.format || "unknown";
+          }),
+        });
+
+        if (response.data.success) {
+          alert(`${response.data.message}`);
+          setShowShareForm(false); // Close the modal after sharing
+          setSelectedReceivers([]); // Clear selected receivers
+          setSelectedFiles([]); // Clear selected files
+        } else {
+          alert(`Failed to share file(s): ${response.data.message}`);
+        }
+      } catch (error) {
+        console.error("Error sharing file(s):", error.message || error);
+
+        alert("Failed to share file(s). Please try again.");
+      }
+    } else if (!selectedDateTime) {
+      if (!selectedReceivers.length || !selectedFiles.length) {
+        alert("Please select at least one file and one receiver.");
+        return;
+      }
+      // Prepare the data to be shared
+      const filesToShare = multiSelectMode ? selectedFiles : [selectedFiles[0]]; // Single file if not in multi-select mode
+
+      const receiverIds = selectedReceivers.map((receiver) => receiver.value);
+
+      try {
+        // Make the API request to share files
+        const response = await axios.post("/api/rule/withTimeBound", {
+          receiverids: receiverIds,
+          file_url: filesToShare.map((fileId) => {
+            const file = files.find((f) => f.file_id === fileId);
+            return file.file_url;
+          }),
+          file_name: filesToShare.map((fileId) => {
+            const file = files.find((f) => f.file_id === fileId);
+            return file.file_name;
+          }),
+          file_size: filesToShare.map((fileId) => {
+            const file = files.find((f) => f.file_id === fileId);
+            return file.file_size;
+          }),
+          resource_type: filesToShare.map((fileId) => {
+            const file = files.find((f) => f.file_id === fileId);
+            return file.resource_type || "unknown";
+          }),
+          format: filesToShare.map((fileId) => {
+            const file = files.find((f) => f.file_id === fileId);
+            return file.format || "unknown";
+          }),
+          from_time: availability.fromTime,
+          to_time: availability.toTime,
+        });
+
+        if (response.data.success) {
+          alert(`${response.data.message}`);
+          setShowShareForm(false); // Close the modal after sharing
+          setSelectedReceivers([]); // Clear selected receivers
+          setSelectedFiles([]); // Clear selected files
+          setAvailability({ fromTime: "", toTime: "" }); // Clear availability
+        } else {
+          alert(`Failed to share file(s): ${response.data}`);
+        }
+      } catch (error) {
+        console.error(
+          "Error sharing file(s):",
+          error.response.data.message || error
+        );
+        setErrors(error.response.data.message);
+        // alert(`Error sharing file(s): ${error.response.data.message}`);
+      }
+    } else if (!availability.fromTime && !availability.toTime) {
+      if (!selectedReceivers.length || !selectedFiles.length) {
+        alert("Please select at least one file and one receiver.");
+        return;
+      }
+      // Prepare the data to be shared
+      const filesToShare = multiSelectMode ? selectedFiles : [selectedFiles[0]]; // Single file if not in multi-select mode
+
+      const receiverIds = selectedReceivers.map((receiver) => receiver.value);
+
+      try {
+        // Make the API request to share files
+        const response = await axios.post("/api/rule/scheduleFiles", {
+          receiverids: receiverIds,
+          file_url: filesToShare.map((fileId) => {
+            const file = files.find((f) => f.file_id === fileId);
+            return file.file_url;
+          }),
+          file_name: filesToShare.map((fileId) => {
+            const file = files.find((f) => f.file_id === fileId);
+            return file.file_name;
+          }),
+          file_size: filesToShare.map((fileId) => {
+            const file = files.find((f) => f.file_id === fileId);
+            return file.file_size;
+          }),
+          resource_type: filesToShare.map((fileId) => {
+            const file = files.find((f) => f.file_id === fileId);
+            return file.resource_type || "unknown";
+          }),
+          format: filesToShare.map((fileId) => {
+            const file = files.find((f) => f.file_id === fileId);
+            return file.format || "unknown";
+          }),
+          schedule_time: selectedDateTime,
+        });
+
+        if (response.data.success) {
+          alert(`${response.data.message}`);
+          setShowShareForm(false); // Close the modal after sharing
+          setSelectedReceivers([]); // Clear selected receivers
+          setSelectedFiles([]); // Clear selected files
+          setSelectedDateTime(""); // Clear selected date-time
+        } else {
+          alert(`Failed to share file(s): ${response.data.message}`);
+        }
+      } catch (error) {
+        console.error(
+          "Error sharing file(s):",
+          error.response.data.message || error
+        );
+        setErrors(error.response.data.message);
+        // alert("Failed to share file(s). Please try again.");
+      }
+    }
+  };
+
   // Handle clicks outside of the options menu to close it
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -254,9 +427,7 @@ function AvailableFile() {
           {files.map((file, index) => (
             <div
               key={index}
-              className={`relative border rounded-lg shadow-md bg-gray-700 p-8 text-center hover:shadow-lg transition duration-300 ${
-                selectedFiles.includes(file.file_id) ? "bg-blue-800" : ""
-              }`}
+              className={`relative border rounded-lg shadow-md bg-gray-700 p-8 text-center hover:shadow-lg transition duration-300`}
               style={{ width: "200px", height: "100px" }}
             >
               {multiSelectMode && (
@@ -288,11 +459,15 @@ function AvailableFile() {
                   className="absolute top-10 right-2 bg-white border rounded-lg shadow-md z-50 overflow-hidden "
                 >
                   <button
-                    onClick={() => setShowShareForm(true)}
+                    onClick={() => {
+                      setShowShareForm(true);
+                      toggleFileSelection(file.file_id);
+                    }}
                     className="block px-4 py-2 hover:bg-gray-100 w-full text-left text-green-500"
                   >
                     Share
                   </button>
+
                   <button
                     onClick={() => handleView(file.file_url)} // Placeholder for view action
                     className="block px-4 py-2 hover:bg-gray-100 w-full text-left text-blue-500"
@@ -327,21 +502,29 @@ function AvailableFile() {
                 <Select
                   options={receivers}
                   isMulti
-                  onChange={setSelectedReceivers}
+                  onChange={(e) => {
+                    setSelectedReceivers(e);
+                    setErrors("");
+                  }}
                   placeholder="Select Receivers..."
                 />
               </div>
+
               {/* Date and Time Picker */}
               <div className="flex flex-col">
                 <label className="text-gray-700 underline mb-2">
-                  Schedule Time for Upload
+                  Schedule Time for Share
                 </label>
                 <input
                   type="datetime-local"
-                  onChange={(e) => setSelectedDateTime(e.target.value)}
+                  onChange={(e) => {
+                    setSelectedDateTime(e.target.value);
+                    setErrors("");
+                  }}
                   className="border rounded px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
+
               {/* Rule Multi-Select */}
               <div>
                 <Select
@@ -351,11 +534,58 @@ function AvailableFile() {
                   placeholder="Select Rules..."
                 />
               </div>
+
+              {/* Availability Section */}
+              <div className="flex flex-col">
+                <label
+                  onClick={() => {
+                    setShowAvailability(!showAvailability);
+                  }}
+                  className="cursor-pointer text-gray-700 underline mb-2 color-blue"
+                >
+                  Mention Availability of the File
+                </label>
+
+                {showAvailability && (
+                  <div className="flex flex-col space-y-2">
+                    <div className="flex flex-col">
+                      <label className="text-gray-700">From Time</label>
+                      <input
+                        type="datetime-local"
+                        onChange={(e) => {
+                          setAvailability((prev) => ({
+                            ...prev,
+                            fromTime: e.target.value,
+                          }));
+                          setErrors("");
+                        }}
+                        className="border rounded px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                    <div className="flex flex-col">
+                      <label className="text-gray-700">To Time</label>
+                      <input
+                        type="datetime-local"
+                        onChange={(e) => {
+                          setAvailability((prev) => ({
+                            ...prev,
+                            toTime: e.target.value,
+                          }));
+                          setErrors("");
+                        }}
+                        className="border rounded px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+              {errors && <p className="text-red-500 text-sm">{errors}</p>}
             </div>
+
             {/* Form Footer */}
             <div className="flex justify-between mt-6">
               <button
-                // onClick={handleShare}
+                onClick={handleShare}
                 className="px-4 py-2 rounded bg-green-500 text-white hover:bg-green-600"
               >
                 Share
