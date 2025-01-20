@@ -156,17 +156,17 @@ const getAllReceivers = asyncHandler(async (req, res) => {
 
 const shareFile = asyncHandler(async (req, res) => {
   const db = await connectDB();
-  const { receiverids, file_url, file_name, file_size, resource_type } =
+  const { receiverids, file_url, file_name, file_size, resource_type,format } =
     req.body;
   const sender_id = req.user.user_id;
   const sender_name = req.user.first_name + " " + req.user.last_name;
-  const format = null; // To be handled later
+  // const format = null; // To be handled later
   const created_at = new Date().toISOString();
   const updated_at = new Date().toISOString();
 
   const folder = "IN";
 
-  if (!(receiverids && file_url && file_name && file_size && resource_type)) {
+  if (!(receiverids && file_url && file_name && file_size && resource_type && format)) {
     return res.status(400).json({
       status: false,
       message: "All fields are required",
@@ -215,7 +215,7 @@ const shareFile = asyncHandler(async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      message: `${receiverids.length} file(s) successfully shared`,
+      message: `file(s) successfully shared to ${receiverids.length} receiver(s) `,
     });
   } catch (error) {
     return res.status(500).json({
@@ -251,6 +251,7 @@ const getAllUserFilesToDownload = asyncHandler(async (req, res) => {
                 resource_type,
                 file_name, 
                 from_time, 
+                status,
                 to_time,
                 created_at,
             CASE 
@@ -259,11 +260,13 @@ const getAllUserFilesToDownload = asyncHandler(async (req, res) => {
                 WHEN (UTC_TIMESTAMP() BETWEEN from_time AND to_time) THEN 'Available'
                 WHEN (UTC_TIMESTAMP() > to_time) THEN 'Unavailable'
                 ELSE 'Unavailable'
-            END AS status
+            END AS availabilityStatus
             FROM 
             sharefiles
             WHERE 
-            user_id = ? AND folder = ?;
+            user_id = ? AND 
+            folder = ? AND 
+            status = 'completed';
             `,
       [userId, folder]
     );

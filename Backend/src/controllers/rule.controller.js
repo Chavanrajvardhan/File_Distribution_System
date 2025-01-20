@@ -1,12 +1,28 @@
 import connectDB from "../db/db.js";
 import asyncHandler from "../utils/asyncHandler.js";
 
+const validScheduleTime = (scheduleTime) => {
+  scheduleTime = new Date(scheduleTime);
+  const currentDate = new Date();
+ 
+  if (scheduleTime < currentDate) {
+    return {
+      isValid: false,
+      message: "Schedule time  can't be in the past.",
+    };
+  }
+ 
+  return { isValid: true };
+ 
+}
+
 const validateTimeBound = (from_time, to_time) => {
   from_time = new Date(from_time);
   to_time = new Date(to_time);
   const currentDate = new Date(); // Current time in UTC
 
   if (from_time < currentDate) {
+    console.log("from time less");
     return {
       isValid: false,
       message: "File sharing start time can't be in the past.",
@@ -60,6 +76,8 @@ const shareWithTimeBoundRule = asyncHandler(async (req, res) => {
   const format = null; // To be handled later
   const folder = "IN";
 
+
+  console.log(from_time, to_time);
   if (!(receiverids && file_url && file_name && file_size && resource_type)) {
     return res.status(400).json({
       status: false,
@@ -82,6 +100,7 @@ const shareWithTimeBoundRule = asyncHandler(async (req, res) => {
   if (from_time_utc || to_time_utc) {
     const validationResult = validateTimeBound(from_time_utc, to_time_utc);
     if (!validationResult.isValid) {
+      console.log(validationResult.message);
       return res.status(400).json({
         status: false,
         message: validationResult.message,
@@ -120,7 +139,7 @@ const shareWithTimeBoundRule = asyncHandler(async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      message: `${receiverids.length} file(s) successfully shared with time-bound restrictions`,
+      message: `file(s) successfully shared with time-bound restrictions to ${receiverids.length} receiver(s)`,
     });
   } catch (error) {
     return res.status(500).json({
@@ -492,3 +511,80 @@ export {
   shareFilesUsingRules,
   getAllUserRules
 };
+
+
+
+const scheduleFilesToShare = asyncHandler(async (req, res) => {
+  const db = await connectDB();
+ 
+  const sender_id = req.user.user_id;
+  const sender_name = req.user.first_name + " " + req.user.last_name;
+  const { receiverids, file_url, file_name, file_size, resource_type, schedule_time } = req.body;
+ 
+  console.log(receiverids, file_url, file_name, file_size, resource_type, schedule_time);
+  // Validate inputs
+  if (!(sender_id || Array.isArray(receiverids) && receiverids.length === 0 && file_url && file_name && file_size && resource_type && schedule_time)) {
+    return res.status(400).json({
+      success: false,
+      message: "All fields are required, and receiver_ids must be a non-empty array."
+    });
+  }
+ 
+  // Convert local time to UTC
+  const schedule_time_utc = schedule_time ? new Date(schedule_time).toISOString() : null;
+ 
+  if (schedule_time) {
+    const validationResult = validScheduleTime(schedule_time_utc);
+    if (!validationResult.isValid) {
+      return res.status(400).json({
+        status: false,
+        message: validationResult.message,
+      });
+    }
+  }
+ 
+  try {
+ 
+    const created_at = new Date().toISOString()
+    const updated_at = new Date().toISOString()
+ 
+    const status = 'pending'
+    // Insert a task for each receiver
+    const insertPromises = receiverids.map((receiver_id) =>
+      db.query(
+        `INSERT INTO sharefiles
+                 (sender_id, sender_name,user_id, file_url, file_name, file_size, resource_type, schedule_time, status, created_at, updated_at)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?,?,?)`,
+        [
+          sender_id,
+          sender_name,
+          receiver_id,
+          file_url,
+          file_name,
+          file_size,
+          resource_type,
+          schedule_time_utc,
+          status,
+          created_at,
+          updated_at,
+        ]
+      )
+    );
+ 
+    // Execute all insertions in parallel
+    await Promise.all(insertPromises);
+ 
+    res.status(201).json({
+      success: true,
+      message: `file(s) successfully scheduled to ${receiverids.length} receiver(s)`,
+    });
+  } catch (error) {
+    console.error("Error scheduling tasks:", error.message);
+    res.status(500).json({ success: false, message: "Error scheduling tasks.", error: error.message });
+  }
+})
+
+export { 
+  shareWithTimeBoundRule,
+  scheduleFilesToShare
+ };
