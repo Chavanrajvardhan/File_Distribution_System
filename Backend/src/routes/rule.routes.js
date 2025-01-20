@@ -2,7 +2,10 @@ import { Router } from 'express';
 
 import {
     shareWithTimeBoundRule,
-    scheduleFilesToShare
+    scheduleFilesToShare,
+    newUserRule,
+    shareFilesUsingRules,
+    getAllUserRules
 } from "../controllers/rule.controller.js"
 
 import { verifyJWT } from "../middlwares/auth.middleware.js";
@@ -12,6 +15,8 @@ router.use(verifyJWT); // applay verify jwt for all routes
 
 router.route("/withTimeBound").post(shareWithTimeBoundRule)
 router.route("/scheduleFiles").post(scheduleFilesToShare)
-
+router.route("/AddNewRule").post(newUserRule)
+router.route("/shareFilesUsingRules").post(shareFilesUsingRules)
+router.route("/allUserRules").get(getAllUserRules)
 
 export default router;
