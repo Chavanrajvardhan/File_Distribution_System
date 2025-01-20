@@ -2,48 +2,114 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { useAuth } from "../context/Authcontext.jsx";
+import Alert from "@mui/joy/Alert";
+import IconButton from "@mui/joy/IconButton";
+import Typography from "@mui/joy/Typography";
+import CheckCircleIcon from "@mui/icons-material/CheckCircle";
+import WarningIcon from "@mui/icons-material/Warning";
+import ReportIcon from "@mui/icons-material/Report";
+import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
 
 const Login = () => {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({ email: "", password: "" });
-  const [errors, setErrors] = useState({ email: "", password: "" });
   const { login } = useAuth();
+
+  const [alert, setAlert] = useState({
+    show: false,
+    type: "success",
+    message: "",
+  });
+
+  const showAlert = (type, message) => {
+    setAlert({
+      show: true,
+      type,
+      message,
+    });
+    setTimeout(() => setAlert({ show: false, type: "", message: "" }), 5000);
+  };
+
+  const AlertComponent = ({ type, message, onClose }) => {
+    const alertProps = {
+      success: {
+        icon: <CheckCircleIcon />,
+        color: "success",
+      },
+      error: {
+        icon: <ReportIcon />,
+        color: "danger",
+      },
+      warning: {
+        icon: <WarningIcon />,
+        color: "warning",
+      },
+    }[type] || { icon: <InfoIcon />, color: "neutral" };
+
+    return (
+      <Alert
+        sx={{
+          display: "flex", // Flex container for centering
+          justifyContent: "center", // Center horizontally
+          alignItems: "center", // Center vertically
+          position: "fixed", // Fixed position to remain visible
+          top: "40px", // Move to the center vertically
+          left: "50%", // Move to the center horizontally
+          transform: "translate(-50%, -50%)", // Offset by half the width and height
+          zIndex: 9999, // Ensure it stays on top
+          maxWidth: "400px",
+        }}
+        startDecorator={alertProps.icon}
+        variant="soft"
+        color={alertProps.color}
+        endDecorator={
+          <IconButton variant="soft" color={alertProps.color} onClick={onClose}>
+            <CloseRoundedIcon />
+          </IconButton>
+        }
+      >
+        <div>
+          <Typography level="body-sm" color={alertProps.color}>
+            {message}
+          </Typography>
+        </div>
+      </Alert>
+    );
+  };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData({ ...formData, [name]: value });
-    // Clear error message for the field being updated
-    setErrors((prevErrors) => ({ ...prevErrors, [name]: "" }));
   };
 
   const validateInputs = () => {
     let valid = true;
-    const newErrors = { email: "", password: "" };
 
     // Email validation
-    if (!formData.email) {
-      newErrors.email = "Email is required.";
-      valid = false;
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      newErrors.email = "Please enter a valid email address.";
-      valid = false;
-    }
 
     // Password validation
     if (!formData.password) {
-      newErrors.password = "Password is required.";
+      showAlert("error", "Password is required.");
       valid = false;
     } else if (
       !/(?=.*[a-zA-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}/.test(
         formData.password
       )
     ) {
-      newErrors.password =
-        "Password must be at least 8 characters long, alphanumeric, and include one special character.";
+      showAlert(
+        "error",
+        "Password must be at least 8 characters long and contain at least one letter, one number, and one special character."
+      );
       valid = false;
     }
 
-    setErrors(newErrors);
+    if (!formData.email) {
+      showAlert("error", "Email is required.");
+      valid = false;
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      showAlert("error", "Invalid email address.");
+      valid = false;
+    }
     return valid;
   };
 
@@ -59,18 +125,25 @@ const Login = () => {
         localStorage.setItem("user", JSON.stringify(user));
         localStorage.setItem("role", role);
         login(user);
-        navigate("/dashboard");
+   
       } else {
-        alert(response.data.message || "Something went wrong!");
+        showAlert("error", response.data.message || "Login failed!");
       }
     } catch (error) {
       console.error("Error:", error);
-      alert(error.response?.data?.message || "Login failed!");
+      showAlert("error", error.response?.data?.message);
     }
   };
 
   return (
     <div className="bg-customDark h-screen flex flex-col justify-center items-center">
+      {alert.show && (
+        <AlertComponent
+          type={alert.type}
+          message={alert.message}
+          onClose={() => setAlert({ show: false, type: "", message: "" })}
+        />
+      )}
       <div className="max-w-md w-full p-6 bg-cardColor border border-gray-200 rounded-lg shadow-md">
         <h1 className="text-2xl font-semibold text-center mb-4 text-white">
           User Login
@@ -91,9 +164,6 @@ const Login = () => {
               onChange={handleInputChange}
               className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-sm"
             />
-            {errors.email && (
-              <p className="text-red-500 text-sm mt-1">{errors.email}</p>
-            )}
           </div>
           <div>
             <label
@@ -110,9 +180,6 @@ const Login = () => {
               onChange={handleInputChange}
               className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-sm"
             />
-            {errors.password && (
-              <p className="text-red-500 text-sm mt-1">{errors.password}</p>
-            )}
           </div>
           <div className="flex justify-center items-center">
             <button

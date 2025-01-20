@@ -7,8 +7,6 @@ const AuthContext = createContext();
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null); // To store user data
   const [userRole, setUserRole] = useState(null); // To store user role
-  
-  // console.log(user, userRole)
  
   // Load user data from localStorage when the app initializes
   useEffect(() => {

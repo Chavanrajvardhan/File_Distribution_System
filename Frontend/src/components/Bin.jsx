@@ -1,10 +1,82 @@
 import React, { useState, useEffect, useContext } from "react";
 import axios from "axios";
 import { useAuth } from "../context/Authcontext"; //
+import Alert from "@mui/joy/Alert";
+import IconButton from "@mui/joy/IconButton";
+import Typography from "@mui/joy/Typography";
+import CheckCircleIcon from "@mui/icons-material/CheckCircle";
+import WarningIcon from "@mui/icons-material/Warning";
+import ReportIcon from "@mui/icons-material/Report";
+import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
 
 const BinComponent = () => {
   const { user } = useAuth(); // Access user info from AuthContext
   const [deletedFiles, setDeletedFiles] = useState([]);
+
+  const [alert, setAlert] = useState({
+    show: false,
+    type: "success",
+    message: "",
+  });
+
+  const showAlert = (type, message) => {
+    setAlert({
+      show: true,
+      type,
+      message,
+    });
+    setTimeout(() => setAlert({ show: false, type: "", message: "" }), 5000);
+  };
+
+  const AlertComponent = ({ type, message, onClose }) => {
+    const alertProps = {
+      success: {
+        icon: <CheckCircleIcon />,
+        color: "success",
+      },
+      error: {
+        icon: <ReportIcon />,
+        color: "danger",
+      },
+      warning: {
+        icon: <WarningIcon />,
+        color: "warning",
+      },
+    }[type] || { icon: <InfoIcon />, color: "neutral" };
+
+    return (
+      <Alert
+        sx={{
+          display: "flex", // Flex container for centering
+          justifyContent: "center", // Center horizontally
+          alignItems: "center", // Center vertically
+          position: "fixed", // Fixed position to remain visible
+          top: "40px", // Move to the center vertically
+          left: "50%", // Move to the center horizontally
+          transform: "translate(-50%, -50%)", // Offset by half the width and height
+          zIndex: 9999, // Ensure it stays on top
+          maxWidth: "400px",
+        }}
+        startDecorator={alertProps.icon}
+        variant="soft"
+        color={alertProps.color}
+        endDecorator={
+          <IconButton variant="soft" color={alertProps.color} onClick={onClose}>
+            <CloseRoundedIcon />
+          </IconButton>
+        }
+      >
+        <div>
+          <Typography level="body-sm" color={alertProps.color}>
+            {message}
+          </Typography>
+        </div>
+      </Alert>
+    );
+  };
+
+
+
 
   // Fetch deleted files for the logged-in user
   useEffect(() => {
@@ -30,17 +102,17 @@ const BinComponent = () => {
       const response = await axios.post(`/api/file/RestoreFile/${fileId}`);
       setDeletedFiles((prev) => prev.filter((file) => file.file_id !== fileId));
       if (response.data.success) {
-        alert("File restored successfully!");
+        showAlert("success", "File restored successfully!");
         setDeletedFiles((prev) =>
           prev.filter((file) => file.file_id !== fileId)
         );
       } else {
         console.error("Error restoring file:", response.data.message);
-        alert("Failed to restore file.");
+        showAlert("error", "Failed to restore file.");
       }
     } catch (error) {
       console.error("Error restoring file:", error);
-      alert("Failed to restore file.");
+      showAlert("error", "Failed to restore file from server.");
     }
   };
 
@@ -51,21 +123,28 @@ const BinComponent = () => {
         `/api/file/permanentDelete/${fileId}`
       );
       if (response.data.success) {
-        alert("File deleted permanently!");
+        showAlert("success", "File deleted permanently!");
         setDeletedFiles(deletedFiles.filter((file) => file.file_id !== fileId));
       } else {
         console.error("Error deleting file:", response.data.message);
-        alert("Failed to delete the file.");
+        showAlert("error", "Failed to delete the file.");
       }
     } catch (error) {
       console.error("Error deleting file:", error);
-      alert("Failed to delete the file from server.");
+      showAlert("error", "Failed to delete the file from server.");
     }
   };
 
   
   return (
     <div className="px-6 py-4 rounded-3xl bg-cardColor overflow-hidden min-h-screen">
+       {alert.show && (
+        <AlertComponent
+          type={alert.type}
+          message={alert.message}
+          onClose={() => setAlert({ show: false, type: "", message: "" })}
+        />
+      )}
       <div className="flex flex-col text-white">
         {/* Header */}
         <div className="p-2 flex justify-between items-center">

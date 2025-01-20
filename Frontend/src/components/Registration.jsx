@@ -1,6 +1,13 @@
-import React, { useState } from "react";
+import React, { isValidElement, useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
+import Alert from "@mui/joy/Alert";
+import IconButton from "@mui/joy/IconButton";
+import Typography from "@mui/joy/Typography";
+import CheckCircleIcon from "@mui/icons-material/CheckCircle";
+import WarningIcon from "@mui/icons-material/Warning";
+import ReportIcon from "@mui/icons-material/Report";
+import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
 
 const Registration = () => {
   const [formData, setFormData] = useState({
@@ -14,78 +21,129 @@ const Registration = () => {
     password: "",
   });
 
-  const [errors, setErrors] = useState({});
   const navigate = useNavigate();
+
+  const [alert, setAlert] = useState({
+    show: false,
+    type: "success",
+    message: "",
+  });
+
+  const showAlert = (type, message) => {
+    setAlert({
+      show: true,
+      type,
+      message,
+    });
+    setTimeout(() => setAlert({ show: false, type: "", message: "" }), 5000);
+  };
+
+  const AlertComponent = ({ type, message, onClose }) => {
+    const alertProps = {
+      success: {
+        icon: <CheckCircleIcon />,
+        color: "success",
+      },
+      error: {
+        icon: <ReportIcon />,
+        color: "danger",
+      },
+      warning: {
+        icon: <WarningIcon />,
+        color: "warning",
+      },
+    }[type] || { icon: <InfoIcon />, color: "neutral" };
+
+    return (
+      <Alert
+        sx={{
+          display: "flex", // Flex container for centering
+          justifyContent: "center", // Center horizontally
+          alignItems: "center", // Center vertically
+          position: "fixed", // Fixed position to remain visible
+          top: "40px", // Move to the center vertically
+          left: "50%", // Move to the center horizontally
+          transform: "translate(-50%, -50%)", // Offset by half the width and height
+          zIndex: 9999, // Ensure it stays on top
+          maxWidth: "400px",
+        }}
+        startDecorator={alertProps.icon}
+        variant="soft"
+        color={alertProps.color}
+        endDecorator={
+          <IconButton variant="soft" color={alertProps.color} onClick={onClose}>
+            <CloseRoundedIcon />
+          </IconButton>
+        }
+      >
+        <div>
+          <Typography level="body-sm" color={alertProps.color}>
+            {message}
+          </Typography>
+        </div>
+      </Alert>
+    );
+  };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData({ ...formData, [name]: value });
 
-    // Clear the error for the field being updated
-    setErrors((prevErrors) => ({ ...prevErrors, [name]: "" }));
   };
 
   const validateInputs = () => {
-    let valid = true;
-    const newErrors = {};
+    const isValid = true;
 
-    // Name validations
     if (!formData.first_name) {
-      newErrors.first_name = "First name is required.";
-      valid = false;
-    }
-    if (!formData.middle_name) {
-      newErrors.middle_name = "Middle name is required.";
-      valid = false;
-    }
-    if (!formData.last_name) {
-      newErrors.last_name = "Last name is required.";
-      valid = false;
+      showAlert("error", "First name is required.");
+      isValid = false;
+    } else if (!formData.middle_name) {
+      showAlert("error", "Middle name is required.");
+      isValid = false;
+    } else if (!formData.last_name) {
+      showAlert("error", "Last name is required.");
+      isValid = false;
     }
 
-    // Email validation
     if (!formData.email) {
-      newErrors.email = "Email is required.";
-      valid = false;
+      showAlert("error", "Email is required.");
+      isValid = false;
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      newErrors.email = "Please enter a valid email address.";
-      valid = false;
+      showAlert("error", "Invalid email address.");
+      isValid = false;
     }
 
-    // Password validation
+    if (!formData.center_id) {
+      showAlert("error", "Center ID is required.");
+      isValid = false;
+    } else if (!/^[a-zA-Z0-9]+$/.test(formData.center_id)) {
+      showAlert("error", "Center ID must be alphanumeric.");
+      isValid = false;
+    }
+    if (!formData.pc_id) {
+      showAlert("error", "PC ID is required.");
+      isValid = false;
+    } else if (!/^[a-zA-Z0-9]+$/.test(formData.pc_id)) {
+      showAlert("error", "PC ID must be alphanumeric.");
+      isValid = false;
+    }
+
     if (!formData.password) {
-      newErrors.password = "Password is required.";
-      valid = false;
+      showAlert("error", "Password is required.");
+      isValid = false;
     } else if (
       !/(?=.*[a-zA-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}/.test(
         formData.password
       )
     ) {
-      newErrors.password =
-        "Password must be at least 8 characters, alphanumeric, and include one special character.";
-      valid = false;
+      showAlert(
+        "error",
+        "Password must be at least 8 characters long and contain at least one letter, one number, and one special character."
+      );
+      isValid = false;
     }
 
-    // Center ID validation
-    if (!formData.center_id) {
-      newErrors.center_id = "Center ID is required.";
-      valid = false;
-    } else if (!/^[a-zA-Z0-9]+$/.test(formData.center_id)) {
-      newErrors.center_id = "Center ID must be alphanumeric.";
-      valid = false;
-    }
-
-    // PC ID validation
-    if (!formData.pc_id) {
-      newErrors.pc_id = "PC ID is required.";
-      valid = false;
-    } else if (!/^[a-zA-Z0-9]+$/.test(formData.pc_id)) {
-      newErrors.pc_id = "PC ID must be alphanumeric.";
-      valid = false;
-    }
-
-    setErrors(newErrors);
-    return valid;
+    return isValid;
   };
 
   const capitalizeName = (name) => {
@@ -110,15 +168,24 @@ const Registration = () => {
       const response = await axios.post("/api/users/register", formattedData, {
         headers: { "Content-Type": "application/json" },
       });
-      alert(response.data.message || "Registration successful!");
-      navigate("/");
+      showAlert("success", response.data.message);
+      setTimeout(() => {
+        navigate("/");
+      }, 3000);
     } catch (error) {
-      alert(error.response?.data?.message || "Something went wrong!");
+      showAlert("error", error.response?.data?.message);
     }
   };
 
   return (
     <div className="bg-customDark h-screen flex flex-col justify-center items-center">
+      {alert.show && (
+        <AlertComponent
+          type={alert.type}
+          message={alert.message}
+          onClose={() => setAlert({ show: false, type: "", message: "" })}
+        />
+      )}
       <div className="max-w-lg mx-auto mt-6 p-6 bg-cardColor border border-white-300 rounded-lg shadow-md">
         <h2 className="text-2xl font-semibold text-white text-center mb-4">
           User Registration
@@ -138,9 +205,6 @@ const Registration = () => {
                   onChange={handleInputChange}
                   className="p-2 border border-gray-300 rounded w-full focus:outline-none focus:ring focus:ring-blue-300"
                 />
-                {errors[field] && (
-                  <p className="text-red-500 text-sm">{errors[field]}</p>
-                )}
               </div>
             ))}
           </div>
@@ -155,9 +219,6 @@ const Registration = () => {
               onChange={handleInputChange}
               className="p-2 border border-gray-300 rounded w-full focus:outline-none focus:ring focus:ring-blue-300"
             />
-            {errors.email && (
-              <p className="text-red-500 text-sm">{errors.email}</p>
-            )}
           </div>
 
           {/* Role */}
@@ -178,9 +239,6 @@ const Registration = () => {
                 </label>
               ))}
             </div>
-            {errors.role && (
-              <p className="text-red-500 text-sm">{errors.role}</p>
-            )}
           </div>
 
           {/* Center ID */}
@@ -193,9 +251,6 @@ const Registration = () => {
               onChange={handleInputChange}
               className="p-2 border border-gray-300 rounded w-full focus:outline-none focus:ring focus:ring-blue-300"
             />
-            {errors.center_id && (
-              <p className="text-red-500 text-sm">{errors.center_id}</p>
-            )}
           </div>
 
           {/* PC ID */}
@@ -208,9 +263,6 @@ const Registration = () => {
               onChange={handleInputChange}
               className="p-2 border border-gray-300 rounded w-full focus:outline-none focus:ring focus:ring-blue-300"
             />
-            {errors.pc_id && (
-              <p className="text-red-500 text-sm">{errors.pc_id}</p>
-            )}
           </div>
 
           {/* Password */}
@@ -223,9 +275,6 @@ const Registration = () => {
               onChange={handleInputChange}
               className="p-2 border border-gray-300 rounded w-full focus:outline-none focus:ring focus:ring-blue-300"
             />
-            {errors.password && (
-              <p className="text-red-500 text-sm">{errors.password}</p>
-            )}
           </div>
 
           {/* Buttons */}
