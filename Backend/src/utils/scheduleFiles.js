@@ -1,16 +1,17 @@
 // Cron job to process scheduled tasks
+import connectDB from "../db/db.js";
+import cron from "node-cron"
 export const scheduleFiles = async () => {
     const db = await connectDB();
 
     cron.schedule("* * * * *", async () => {
-        console.log("Checking for scheduled tasks...");
 
         try {
             // Fetch pending tasks whose schedule_time has passed
             const [tasks] = await db.query(
                 "SELECT * FROM sharefiles WHERE schedule_time <= UTC_TIMESTAMP()  AND status = 'pending'"
             );
-
+            
             for (const task of tasks) {
                 const {
                     id,
@@ -23,8 +24,11 @@ export const scheduleFiles = async () => {
                     console.log(`Sharing file: ${file_name} with user ID: ${user_id}`);
 
                     // Update the task status to 'completed'
-                    await db.query("UPDATE sharefiles SET status = 'completed' WHERE user_id = ?", [user_id]);
-
+                    await db.query(
+                        "UPDATE sharefiles SET status = 'completed' WHERE id = ? AND status = 'pending'",
+                        [id]
+                      );
+                      
                     console.log(`Task ${id} completed.`);
                 } catch (error) {
                     console.error(`Failed to process task ${id}:`, error.message);
@@ -39,5 +43,3 @@ export const scheduleFiles = async () => {
     });
 };
 
-// Start the cron job
-scheduleCronJob();
