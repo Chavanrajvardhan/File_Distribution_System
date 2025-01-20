@@ -146,20 +146,28 @@ const loginUser = asyncHandler(async (req, res) => {
 
     const newLogedInUser = result[0]
 
-    const options = {
+    const accessTokenOptions = {
         httpOnly: true,
-        secure: true
-    }
+        secure: true,
+        sameSite: 'Strict', // Prevents the cookie from being sent with cross-site requests
+        maxAge: 24 * 60 * 60 * 1000, // 1 day in milliseconds
+    };
+    
+    // Options for refreshToken
+    const refreshTokenOptions = {
+        ...accessTokenOptions, // Inherits other properties
+        maxAge: 10 * 24 * 60 * 60 * 1000, // 10 days in milliseconds
+    };
 
     return res
         .status(200)
-        .cookie("accessToken", accessToken, options)
-        .cookie("refreshToken", refreshToken, options)
+        .cookie("accessToken", accessToken, accessTokenOptions)
+        .cookie("refreshToken", refreshToken, refreshTokenOptions)
         .json({
             status: 200,
             success: true,
             data: {
-                refreshToken, accessToken, newLogedInUser
+            newLogedInUser
             },
             message: "user logged in Successfully"
         })
