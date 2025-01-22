@@ -137,9 +137,8 @@ const getAllReceivers = asyncHandler(async (req, res) => {
                     role, 
                     created_at 
                 FROM ${dbName}.users
-                WHERE role = 'receiver' OR role = 'senderreceiver'  
-            `); // change speling mistake here and user controller
-
+                WHERE role = 'receiver'|| 'senderreceiver'   
+            `);// change speling mistake here and user controller
   if (result.length === 0) {
     return res.status(404).json({
       success: false,
@@ -155,77 +154,6 @@ const getAllReceivers = asyncHandler(async (req, res) => {
   });
 });
 
-const shareFile = asyncHandler(async (req, res) => {
-  const db = await connectDB();
-  const { receiverids, file_url, file_name, file_size, resource_type,format } =
-    req.body;
-  const sender_id = req.user.user_id;
-  const sender_name = req.user.first_name + " " + req.user.last_name;
-  // const format = null; // To be handled later
-  const created_at = new Date().toISOString();
-  const updated_at = new Date().toISOString();
-
-  const folder = "IN";
-
-  if (!(receiverids && file_url && file_name && file_size && resource_type && format)) {
-    return res.status(400).json({
-      status: false,
-      message: "All fields are required",
-    });
-  }
-
-  if (!Array.isArray(receiverids) || receiverids.length === 0) {
-    return res.status(400).json({
-      status: false,
-      message: "Receiver IDs must be an array and cannot be empty",
-    });
-  }
-
-  const insertPromises = receiverids.map((receiverid) => {
-    return db.query(
-      `INSERT INTO sharefiles (sender_id,sender_name,user_id, file_url, file_name, file_size, resource_type, format, folder, created_at, updated_at) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        sender_id,
-        sender_name,
-        receiverid,
-        file_url,
-        file_name,
-        file_size,
-        resource_type,
-        format,
-        folder,
-        created_at,
-        updated_at,
-      ]
-    );
-  });
-
-  try {
-    // Execute all insertions in parallel
-    const results = await Promise.all(insertPromises);
-
-    // Check if all insertions were successful
-    if (results.some((result) => result.length === 0)) {
-      return res.status(400).json({
-        status: false,
-        message:
-          "Error while inserting data into database for one or more users",
-      });
-    }
-
-    return res.status(200).json({
-      success: true,
-      message: `file(s) successfully shared to ${receiverids.length} receiver(s) `,
-    });
-  } catch (error) {
-    return res.status(500).json({
-      status: false,
-      message: "Internal Server Error",
-      error: error.message,
-    });
-  }
-});
 
 const getAllUserFilesToDownload = asyncHandler(async (req, res) => {
   const db = await connectDB();
