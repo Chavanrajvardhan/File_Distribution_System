@@ -1,131 +1,170 @@
 import connectDB from "../db/db.js";
 import asyncHandler from "../utils/asyncHandler.js";
 
-const validScheduleTime = (scheduleTime) => {
-  scheduleTime = new Date(scheduleTime);
-  const currentDate = new Date();
- 
-  if (scheduleTime < currentDate) {
-    return {
-      isValid: false,
-      message: "Schedule time  can't be in the past.",
-    };
-  }
- 
-  return { isValid: true };
- 
-}
-
-const validateTimeBound = (from_time, to_time) => {
-  from_time = new Date(from_time);
-  to_time = new Date(to_time);
+const validateTimeInputs = ({ from_time, to_time, schedule_time }) => {
   const currentDate = new Date(); // Current time in UTC
+  console.log("Current Date:", currentDate);
 
-  if (from_time < currentDate) {
-    console.log("from time less");
-    return {
-      isValid: false,
-      message: "File sharing start time can't be in the past.",
-    };
-  }
-
-  if (to_time < currentDate) {
-    return {
-      isValid: false,
-      message: "File sharing end time can't be in the past.",
-    };
-  }
-
-  if (from_time > to_time) {
-    return {
-      isValid: false,
-      message: "End time must be after the start time.",
-    };
-  }
-
-  return { isValid: true };
-};
-
-const shareWithTimeBoundRule = asyncHandler(async (req, res) => {
-  const db = await connectDB();
-  const sender_id = req.user.user_id;
-  const sender_name = req.user.first_name + " " + req.user.last_name;
-  const {
-    receiverids,
-    file_url,
-    file_name,
-    file_size,
-    resource_type,
-    from_time,
-    to_time,
-  } = req.body;
-  const format = null; // To be handled later
-  const folder = "IN";
-
-
-  console.log(from_time, to_time);
-  if (!(receiverids && file_url && file_name && file_size && resource_type)) {
-    return res.status(400).json({
-      status: false,
-      message: "All fields are required",
-    });
-  }
-
-  if (!Array.isArray(receiverids) || receiverids.length === 0) {
-    return res.status(400).json({
-      status: false,
-      message: "Receiver IDs must be an array and cannot be empty",
-    });
-  }
-
-  // Convert local time to UTC
-  const from_time_utc = from_time ? new Date(from_time).toISOString() : null;
-  const to_time_utc = to_time ? new Date(to_time).toISOString() : null;
-
-  // Validate time-bound rule if from_time and to_time are provided
-  if (from_time_utc || to_time_utc) {
-    const validationResult = validateTimeBound(from_time_utc, to_time_utc);
-    if (!validationResult.isValid) {
-      console.log(validationResult.message);
-      return res.status(400).json({
-        status: false,
-        message: validationResult.message,
-      });
+  // Validate schedule_time
+  if (schedule_time) {
+    const scheduleTime = new Date(schedule_time);
+    if (scheduleTime < currentDate) {
+      return {
+        isValid: false,
+        message: "Schedule time can't be in the past.",
+      };
     }
   }
 
-  const created_at = new Date().toISOString();
-  const updated_at = new Date().toISOString();
+  // Validate from_time
+  if (from_time) {
+    const fromTime = new Date(from_time);
+    if (fromTime < currentDate) {
+      return {
+        isValid: false,
+        message: "File sharing start time can't be in the past.",
+      };
+    }
+  }
 
-  const insertPromises = receiverids.map((receiverid) => {
-    return db.query(
-      `INSERT INTO sharefiles (sender_id,sender_name, user_id, file_url, file_name, file_size, resource_type, format, folder, from_time, to_time, created_at, updated_at) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        sender_id,
-        sender_name,
-        receiverid,
-        file_url,
-        file_name,
-        file_size,
-        resource_type,
-        format,
-        folder,
-        from_time_utc,
-        to_time_utc,
-        created_at,
-        updated_at,
-      ]
-    );
-  });
+  // Validate to_time
+  if (to_time) {
+    const toTime = new Date(to_time);
+    console.log("to_time:", toTime); 
+    console.log(currentDate) // Debugging log to verify to_time
+    if (toTime < currentDate) {
+      console.log("in if block")
+      return {
+        isValid: false,
+        message: "File sharing end time can't be in the past.",
+      };
+    }
+  }
+
+  // Validate from_time and to_time
+  if (from_time && to_time) {
+    const fromTime = new Date(from_time);
+    const toTime = new Date(to_time);
+
+    if (fromTime > toTime) {
+      return {
+        isValid: false,
+        message: "End time must be after the start time.",
+      };
+    }
+  }
+
+  // Validate schedule_time and from_time
+  if (schedule_time && from_time) {
+    const scheduleTime = new Date(schedule_time);
+    const fromTime = new Date(from_time);
+
+    if (fromTime < scheduleTime) {
+      return {
+        isValid: false,
+        message: "File sharing start time can't be before the scheduled time.",
+      };
+    }
+  }
+
+  // Validate schedule_time and to_time
+  if (schedule_time && to_time) {
+    const scheduleTime = new Date(schedule_time);
+    const toTime = new Date(to_time);
+
+    if (toTime < scheduleTime) {
+      return {
+        isValid: false,
+        message: "File sharing end time can't be before the scheduled time.",
+      };
+    }
+  }
+
+  return { isValid: true }; // All validations passed
+};
+
+
+
+const shareFilesWithTimeBound = asyncHandler(async (req, res) => {
+  const db = await connectDB();
+  const sender_id = req.user.user_id;
+  const sender_name = `${req.user.first_name} ${req.user.last_name}`;
+  const { receiverids, files, from_time, to_time, schedule_time } = req.body;
+
+  // Convert provided times to UTC, or default to null
+  const utcFromTime = from_time ? new Date(from_time).toISOString() : null;
+  const utcToTime = to_time ? new Date(to_time).toISOString() : null;
+  const utcScheduleTime = schedule_time ? new Date(schedule_time).toISOString() : null;
+
+  // Check if receiver IDs are provided
+  if (!receiverids || !Array.isArray(receiverids) || receiverids.length === 0) {
+    return res.status(400).json({ status: false, message: "Select User" });
+  }
+
+  // Check if files are provided
+  if (!files || !Array.isArray(files) || files.length === 0) {
+    return res.status(400).json({ status: false, message: "File must be selected" });
+  }
+
+  // Validate file fields
+  for (const file of files) {
+    file.format = file.format ?? null;
+    if (!(file.file_url && file.file_name && file.file_size && file.resource_type)) {
+      return res.status(400).json({ status: false, message: "All file fields must be provided" });
+    }
+  }
+
+  // Prepare times for validation
+  const validTimes = {
+    from_time: utcFromTime,
+    to_time: utcToTime,
+    schedule_time: utcScheduleTime,
+  };
+
+  console.log(validTimes)
+  // Validate times only if they are provided
+  const validationResult = validateTimeInputs(validTimes);
+  console.log(validationResult)
+
+  if (!validationResult.isValid) {
+    console.log("Validation failed:", validationResult.message);
+    return res.status(400).json({ status: false, message: validationResult.message });
+  }
+  const folder = "IN";
+  const created_at = new Date().toISOString();
+  const updated_at = created_at;
+
+  const insertPromises = receiverids.flatMap((receiverid) =>
+    files.map((file) =>
+      db.query(
+        `INSERT INTO sharefiles 
+         (sender_id, sender_name, user_id, file_url, file_name, file_size, resource_type, format, folder, from_time, to_time, schedule_time, created_at, updated_at) 
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          sender_id,
+          sender_name,
+          receiverid,
+          file.file_url,
+          file.file_name,
+          file.file_size,
+          file.resource_type,
+          file.format,
+          folder,
+          utcFromTime,
+          utcToTime,
+          utcScheduleTime,
+          created_at,
+          updated_at,
+        ]
+      )
+    )
+  );
 
   try {
-    // Execute all insertions in parallel
-    const results = await Promise.all(insertPromises);
-
+    await Promise.all(insertPromises);
     return res.status(200).json({
       success: true,
-      message: `file(s) successfully shared with time-bound restrictions to ${receiverids.length} receiver(s)`,
+      message: `Files successfully shared with ${receiverids.length} receiver(s)`,
     });
   } catch (error) {
     return res.status(500).json({
@@ -137,151 +176,103 @@ const shareWithTimeBoundRule = asyncHandler(async (req, res) => {
 });
 
 
-const scheduleFilesToShare = asyncHandler(async (req, res) => {
-  const db = await connectDB();
-
-  const sender_id = req.user.user_id;
-  const sender_name = req.user.first_name + " " + req.user.last_name;
-  const { receiverids, file_url, file_name, file_size, resource_type, schedule_time } = req.body;
-
-  // Validate inputs
-  if (!(sender_id || Array.isArray(receiverids) || receiverids.length === 0 || file_url || file_name || file_size || resource_type || schedule_time)) {
-    return res.status(400).json({
-      success: false,
-      message: "All fields are required, and receiver_ids must be a non-empty array."
-    });
-  }
-
-  // Convert local time to UTC
-  const schedule_time_utc = schedule_time ? new Date(schedule_time).toISOString() : null;
-
-  if (schedule_time) {
-    const validationResult = validScheduleTime(schedule_time_utc);
-    if (!validationResult.isValid) {
-      return res.status(400).json({
-        status: false,
-        message: validationResult.message,
-      });
-    }
-  }
-
-  try {
-
-    const created_at = new Date().toISOString()
-    const updated_at = new Date().toISOString()
-
-    const status = 'pending'
-    // Insert a task for each receiver
-    const insertPromises = receiverids.map((receiver_id) =>
-      db.query(
-        `INSERT INTO sharefiles 
-                 (sender_id, sender_name,user_id, file_url, file_name, file_size, resource_type, schedule_time, status, created_at, updated_at) 
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?,?,?)`,
-        [
-          sender_id,
-          sender_name,
-          receiver_id,
-          file_url,
-          file_name,
-          file_size,
-          resource_type,
-          schedule_time_utc,
-          status,
-          created_at,
-          updated_at,
-        ]
-      )
-    );
-
-    // Execute all insertions in parallel
-    await Promise.all(insertPromises);
-
-    res.status(201).json({
-      success: true,
-      message: `${receiverids.length} task(s) scheduled successfully.`,
-    });
-  } catch (error) {
-    console.error("Error scheduling tasks:", error.message);
-    res.status(500).json({ success: false, message: "Error scheduling tasks.", error: error.message });
-  }
-})
-
 
 const newUserRule = asyncHandler(async (req, res) => {
-  const db = await connectDB()
+  const db = await connectDB();
   const userId = req.user.user_id;
 
-
   if (!userId) {
-    return res.status(400).json({ message: 'Invalid userId' });
+    return res.status(400).json({ message: "Invalid userId" });
   }
 
-  const { rule_name, from_time, to_time, schedule_time, file_type, allowed_file_size, recipients } = req.body;
+  const {
+    rule_name,
+    from_time,
+    to_time,
+    schedule_time,
+    file_type,
+    allowed_file_size,
+    recipients,
+  } = req.body;
 
   if (!rule_name) {
-    return res.status(400).json({ message: 'Rule name is required.' });
+    return res.status(400).json({ message: "Rule name is required." });
   }
 
   // Check if at least one type of rule data is provided
   if (
-    !((from_time && to_time) || schedule_time || file_type || allowed_file_size || recipients)
+    !(
+      (from_time && to_time) ||
+      schedule_time ||
+      file_type ||
+      allowed_file_size ||
+      recipients
+    )
   ) {
-    return res.status(400).json({ message: 'At least one type of rule is required.' });
+    return res
+      .status(400)
+      .json({ message: "At least one type of rule is required." });
   }
 
   // Convert local time to UTC
   const from_time_utc = from_time ? new Date(from_time).toISOString() : null;
   const to_time_utc = to_time ? new Date(to_time).toISOString() : null;
+  const schedule_time_utc = schedule_time
+    ? new Date(schedule_time).toISOString()
+    : null;
   const created_at = new Date().toISOString();
 
-  // Validate time-bound rule if from_time and to_time are provided
-  if (from_time_utc || to_time_utc) {
-    const validationResult = validateTimeBound(from_time_utc, to_time_utc);
-    if (!validationResult.isValid) {
-      return res.status(400).json({
-        status: false,
-        message: validationResult.message,
-      });
-    }
+  // Validate time-related inputs using validateTimeInputs()
+  const validationResult = validateTimeInputs({
+    from_time: from_time_utc,
+    to_time: to_time_utc,
+    schedule_time: schedule_time_utc,
+  });
+
+  if (!validationResult.isValid) {
+    return res.status(400).json({
+      status: false,
+      message: validationResult.message,
+    });
   }
 
-  // Convert schedule time to UTC
-  const schedule_time_utc = schedule_time ? new Date(schedule_time).toISOString() : null;
-
-  if (schedule_time) {
-    const validationResult = validScheduleTime(schedule_time_utc);
-    if (!validationResult.isValid) {
-      return res.status(400).json({
-        status: false,
-        message: validationResult.message,
-      });
-    }
-  }
-
-
-
+  // Proceed with creating the rule
   try {
-    // Insert the rule into the database
-    const query = `
-        INSERT INTO rules (user_id, rule_name, from_time, to_time, schedule_time, file_type, allowed_file_size, recipients, created_at)
-        VALUES (?, ?, ?, ?, ?, ?,?, ?, ?)
-      `;
-    const [result] = await db.execute(query, [
-      userId,
-      rule_name,
-      from_time_utc,
-      to_time_utc,
-      schedule_time_utc,
-      JSON.stringify(file_type),
-      allowed_file_size,
-      JSON.stringify(recipients),
-      created_at
-    ]);
+    const sql = `
+      INSERT INTO rules (
+        user_id,
+        rule_name,
+        from_time,
+        to_time,
+        schedule_time,
+        file_type,
+        allowed_file_size,
+        recipients,
+        created_at
+      ) 
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `;
 
-    res.status(201).json({
-      message: 'Rule created successfully!',
-      rule: {
-        id: result.insertId,
+    const values = [
+      userId,                // User ID
+      rule_name,             // Rule name
+      from_time_utc,         // From time (UTC)
+      to_time_utc,           // To time (UTC)
+      schedule_time_utc,     // Schedule time (UTC)
+      file_type,             // File type
+      allowed_file_size,     // Allowed file size
+      recipients,            // Recipients
+      created_at             // Created at timestamp
+    ];
+
+    const [result] = await db.query(sql, values);
+
+    return res.status(201).json({
+      status: true,
+      message: "Rule created successfully.",
+      data: {
+        id: result.insertId, // ID of the inserted rule
+        user_id: userId,
         rule_name,
         from_time: from_time_utc,
         to_time: to_time_utc,
@@ -289,27 +280,31 @@ const newUserRule = asyncHandler(async (req, res) => {
         file_type,
         allowed_file_size,
         recipients,
-        created_at,
-      },
+        created_at
+      }
     });
-
-
   } catch (error) {
-    console.error('Error creating rule:', error);
-    res.status(500).json({ message: 'Failed to create rule.' });
+    console.error("Error creating rule:", error);
+    return res.status(500).json({
+      status: false,
+      message: "Internal server error.",
+    });
   }
 
-})
+
+});
+
 
 
 const shareFilesUsingRules = asyncHandler(async (req, res) => {
-  const db = await connectDB()
+  const db = await connectDB();
   const folder = "IN";
   const {
     receiverids,
     files, // Array of files with properties: file_url, file_name, file_size, resource_type, from_time, to_time
-    ruleId
+    ruleId,
   } = req.body;
+
 
   if (!ruleId) {
     return res.status(400).json({
@@ -334,10 +329,10 @@ const shareFilesUsingRules = asyncHandler(async (req, res) => {
 
   // Validation for each file in the array
   for (const file of files) {
-    if (!(file.file_url || file.file_name || file.file_size || file.resource_type || file.formate)) {
+    if (!(file.file_url || file.file_name || file.file_size || file.resource_type || file.format)) {
       return res.status(400).json({
         status: false,
-        message: "Some field are missing in file",
+        message: "Some fields are missing in file",
       });
     }
   }
@@ -345,11 +340,11 @@ const shareFilesUsingRules = asyncHandler(async (req, res) => {
   const created_at = new Date().toISOString();
   const updated_at = new Date().toISOString();
 
-  // Fetch the time-bound rule from the database using ruleId
+  // Fetch the rule from the database using ruleId
   let rule;
   try {
     const [ruleResults] = await db.query(
-      `SELECT from_time, to_time, schedule_time FROM rules WHERE id = ? LIMIT 1`,
+      `SELECT from_time, to_time, schedule_time, allowed_file_size FROM rules WHERE id = ? LIMIT 1`,
       [ruleId]
     );
 
@@ -364,10 +359,9 @@ const shareFilesUsingRules = asyncHandler(async (req, res) => {
     rule = {
       from_time: ruleResult.from_time ? new Date(ruleResult.from_time).toISOString() : null,
       to_time: ruleResult.to_time ? new Date(ruleResult.to_time).toISOString() : null,
-      schedule_time: ruleResult.schedule_time ?  new Date(ruleResult.schedule_time).toISOString() : null,
+      schedule_time: ruleResult.schedule_time ? new Date(ruleResult.schedule_time).toISOString() : null,
+      allowed_file_size: ruleResult.allowed_file_size || null, // May be null if not specified
     };
-
-
   } catch (error) {
     return res.status(500).json({
       status: false,
@@ -376,40 +370,42 @@ const shareFilesUsingRules = asyncHandler(async (req, res) => {
     });
   }
 
-  console.log(rule.schedule_time)
-  // Validate rule times
-  if (rule.from_time && rule.to_time) {
-    const validationResult = validateTimeBound(rule.from_time, rule.to_time);
-    if (!validationResult.isValid) {
+  // Validate files against the allowed file size (if specified)
+  let validFiles = files;
+  if (rule.allowed_file_size) {
+    const oversizedFiles = files.filter((file) => file.file_size > rule.allowed_file_size);
+
+    if (oversizedFiles.length > 0) {
+      const oversizedFileNames = oversizedFiles.map((file) => file.file_name).join(", ");
       return res.status(400).json({
         status: false,
-        message: `Validation failed for rule: ${validationResult.message}`,
+        message: `The following file(s) exceed the allowed file size of ${rule.allowed_file_size} bytes: ${oversizedFileNames}`,
       });
     }
+
+    validFiles = files.filter((file) => file.file_size <= rule.allowed_file_size);
+    console.log(validFiles)
   }
 
-  //validate schedule times
-  if (rule.schedule_time) {
-    const validationResult = validScheduleTime(rule.schedule_time);
-    if (!validationResult.isValid) {
-      return res.status(400).json({
-        status: false,
-        message: validationResult.message,
-      });
-    }
+  // Validate time inputs
+  const validationResult = validateTimeInputs(rule);
+
+  if (!validationResult.isValid) {
+    return res.status(400).json({
+      status: false,
+      message: validationResult.message,
+    });
   }
 
-
-
-  // Prepare insert promises for each combination of file and receiver
+  // Prepare insert promises for each combination of valid file and receiver
   const insertPromises = [];
 
-  files.forEach((file) => {
+  validFiles.forEach((file) => {
     receiverids.forEach((receiverid) => {
       const status = rule.schedule_time ? "pending" : "completed";
       insertPromises.push(
         db.query(
-          `INSERT INTO sharefiles (sender_id, sender_name, user_id, file_url, file_name, file_size, resource_type, format, folder, from_time, to_time, schedule_time, status,created_at, updated_at) 
+          `INSERT INTO sharefiles (sender_id, sender_name, user_id, file_url, file_name, file_size, resource_type, format, folder, from_time, to_time, schedule_time, status, created_at, updated_at) 
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           [
             req.user.user_id,
@@ -433,17 +429,14 @@ const shareFilesUsingRules = asyncHandler(async (req, res) => {
     });
   });
 
-
   try {
     // Execute all insertions in parallel
     await Promise.all(insertPromises);
 
     return res.status(200).json({
       success: true,
-      message: `${files.length} file(s) successfully shared with ${receiverids.length} user(s) using the rule constraints`,
+      message: `${validFiles.length} file(s) successfully shared with ${receiverids.length} user(s) using the rule constraints.`,
     });
-
-
   } catch (error) {
     return res.status(500).json({
       status: false,
@@ -451,8 +444,8 @@ const shareFilesUsingRules = asyncHandler(async (req, res) => {
       error: error.message,
     });
   }
+});
 
-})
 
 
 const getAllUserRules = asyncHandler(async (req, res) => {
@@ -491,8 +484,7 @@ const getAllUserRules = asyncHandler(async (req, res) => {
 })
 
 export {
-  shareWithTimeBoundRule,
-  scheduleFilesToShare,
+  shareFilesWithTimeBound,
   newUserRule,
   shareFilesUsingRules,
   getAllUserRules
