@@ -4,7 +4,6 @@ import {
     uploadFiles,
     getAllUserFiles,
     getAllReceivers,
-    shareFile,
     getAllUserFilesToDownload,
     deleteFile,
     getAllDeletedFiles,
@@ -28,7 +27,6 @@ router.route("/uploadFile").post(
 
 router.route("/allUserFiles/:userId").post(getAllUserFiles)
 router.route("/getAllReceivers").get(getAllReceivers)
-router.route("/shareFile").post(shareFile);
 router.route("/availableToDownload").post(getAllUserFilesToDownload);
 router.route("/deleteFile/:fileIds").post(deleteFile);
 router.route("/RestoreFile/:fileId").post(RestoreFile);

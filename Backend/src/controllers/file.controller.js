@@ -500,7 +500,6 @@ export {
   uploadFiles,
   getAllUserFiles,
   getAllReceivers,
-  shareFile,
   getAllUserFilesToDownload,
   deleteFile,
   getAllDeletedFiles,

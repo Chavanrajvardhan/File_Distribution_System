@@ -182,6 +182,7 @@ useEffect(() => {
   };
 
   return (
+    // hello
     <div className="px-6 py-4 rounded-3xl bg-cardColor overflow-hidden min-h-screen">
       <div className="flex flex-col text-white">
         <div className="p-2 flex justify-between items-center">
@@ -190,7 +191,7 @@ useEffect(() => {
             onClick={handleAddNewRule}
             className="bg-blue-500 px-4 py-2 rounded hover:bg-blue-600"
           >
-            + Add New Rule
+            + Add New Rule 
           </button>
         </div>
 
