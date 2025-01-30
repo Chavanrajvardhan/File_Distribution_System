@@ -47,14 +47,14 @@ const BinComponent = () => {
     return (
       <Alert
         sx={{
-          display: "flex", // Flex container for centering
-          justifyContent: "center", // Center horizontally
-          alignItems: "center", // Center vertically
-          position: "fixed", // Fixed position to remain visible
-          top: "40px", // Move to the center vertically
-          left: "50%", // Move to the center horizontally
-          transform: "translate(-50%, -50%)", // Offset by half the width and height
-          zIndex: 9999, // Ensure it stays on top
+          display: "flex", 
+          justifyContent: "center", 
+          alignItems: "center",
+          position: "fixed",
+          top: "40px",
+          left: "50%", 
+          transform: "translate(-50%, -50%)",
+          zIndex: 9999, 
           maxWidth: "400px",
         }}
         startDecorator={alertProps.icon}
@@ -75,9 +75,6 @@ const BinComponent = () => {
     );
   };
 
-
-
-
   // Fetch deleted files for the logged-in user
   useEffect(() => {
     const fetchDeletedFiles = async () => {
@@ -88,7 +85,7 @@ const BinComponent = () => {
         setDeletedFiles(response.data.data);
       } catch (error) {
         console.error("Error fetching deleted files:", error);
-      } 
+      }
     };
 
     fetchDeletedFiles();
@@ -135,10 +132,9 @@ const BinComponent = () => {
     }
   };
 
-  
   return (
     <div className="px-6 py-4 rounded-3xl bg-cardColor overflow-hidden min-h-screen">
-       {alert.show && (
+      {alert.show && (
         <AlertComponent
           type={alert.type}
           message={alert.message}
@@ -172,7 +168,12 @@ const BinComponent = () => {
                     key={file.file_id}
                     className="border-b last:border-0 hover:bg-gray-800"
                   >
-                    <td className="px-6 py-4">{file.file_name}</td>
+                    <td
+                      className="px-6 py-4 truncate max-w-[150px] overflow-hidden whitespace-nowrap text-ellipsis cursor-pointer"
+                      title={file.file_name}
+                    >
+                      {file.file_name}
+                    </td>
                     <td className="px-6 py-4">{file.deletedDate}</td>
                     <td className="px-6 py-4">{file.deletedTime}</td>
                     <td className="px-6 py-4 flex gap-2 justify-center">
