@@ -126,9 +126,10 @@ const getAllReceivers = asyncHandler(async (req, res) => {
   const db = await connectDB();
   const dbName = process.env.DBNAME;
   const userId = req.user.user_id;
- 
+
   // Retrieve only users with the role "receiver"
-  const [result] = await db.query(`
+  const [result] = await db.query(
+    `
                 SELECT
                     user_id,
                     first_name,
@@ -142,14 +143,16 @@ const getAllReceivers = asyncHandler(async (req, res) => {
                   role IN ('receiver', 'senderreceiver')
                   AND user_id != ?  
  
-            `, [userId]);
+            `,
+    [userId]
+  );
   if (result.length === 0) {
     return res.status(404).json({
       success: false,
       message: "No receivers found",
     });
   }
- 
+
   return res.status(200).json({
     success: true,
     data: result,
@@ -173,35 +176,46 @@ const getAllUserFilesToDownload = asyncHandler(async (req, res) => {
   try {
     const [result] = await db.query(
       `
-            SELECT 
-                id, 
-                sender_id,
-                sender_name,
-                user_id,
-                file_url,
-                file_size,
-                resource_type,
-                file_name, 
-                from_time, 
-                status,
-                to_time,
-                created_at,
-            CASE 
-                WHEN (from_time IS NULL AND to_time IS NULL) THEN 'Available'
-                WHEN (UTC_TIMESTAMP() < from_time) THEN 'Unavailable'
-                WHEN (UTC_TIMESTAMP() > from_time) THEN 'Available'
-                WHEN (UTC_TIMESTAMP() BETWEEN from_time AND to_time) THEN 'Available'
-                WHEN (UTC_TIMESTAMP() > to_time) THEN 'Unavailable'
-                WHEN (UTC_TIMESTAMP() < to_time) THEN 'Available'
-                ELSE 'Unavailable'
-            END AS availabilityStatus
-            FROM 
-            sharefiles
-            WHERE 
-            user_id = ? AND 
-            folder = ? AND 
-            status = 'completed';
-            `,
+                          SELECT 
+                   id, 
+                   sender_id,
+                   sender_name,
+                   user_id,
+                   file_url,
+                   file_size,
+                   resource_type,
+                   file_name, 
+                   from_time, 
+                   to_time,
+                   status,
+                   created_at,
+                   CASE 
+                        WHEN from_time IS NULL AND to_time IS NULL THEN 'Available'
+                       WHEN from_time IS NOT NULL AND to_time IS NULL THEN 
+                            CASE 
+                                WHEN UTC_TIMESTAMP() < from_time THEN 'Unavailable'
+                                ELSE 'Available'
+                            END
+                        WHEN from_time IS NULL AND to_time IS NOT NULL THEN 
+                            CASE 
+                                WHEN UTC_TIMESTAMP() > to_time THEN 'Unavailable'
+                                ELSE 'Available'
+                            END
+                        WHEN from_time IS NOT NULL AND to_time IS NOT NULL THEN 
+                            CASE 
+                                WHEN UTC_TIMESTAMP() < from_time THEN 'Unavailable'
+                                WHEN UTC_TIMESTAMP() BETWEEN from_time AND to_time THEN 'Available'
+                                ELSE 'Unavailable'
+                            END
+                    END AS availabilityStatus
+                FROM 
+                   sharefiles
+                WHERE 
+                   user_id = ? 
+                    AND folder = ? 
+                    AND status = 'completed';
+                    
+                            `,
       [userId, folder]
     );
 
@@ -242,45 +256,42 @@ const getAllUserFilesToDownload = asyncHandler(async (req, res) => {
 const deleteFile = asyncHandler(async (req, res) => {
   const db = await connectDB();
   const fileIds = req.params.fileIds;
-
+ 
   if (!fileIds) {
     return res.status(400).json({
       success: false,
       message: "No file IDs provided for deletion",
     });
   }
-
+ 
   try {
     // Split the file IDs into an array
     const fileIdArray = fileIds
       .split(",")
       .map((id) => parseInt(id.trim()))
       .filter(Boolean);
-
+ 
     if (fileIdArray.length === 0) {
       return res.status(400).json({
         success: false,
         message: "Invalid file IDs provided",
       });
     }
-
+    const deleted_at = new Date().toISOString(); // ISO 8601 format
+ 
     // Update the files to mark as deleted
     const [result] = await db.query(
-      `
-      UPDATE files 
-      SET delete_flag = TRUE 
-      WHERE file_id IN (?);
-      `,
-      [fileIdArray]
+      `UPDATE files SET delete_flag = TRUE, deleted_at = ? WHERE file_id IN (?)`,
+      [deleted_at, fileIdArray]
     );
-
+ 
     if (result.affectedRows === 0) {
       return res.status(404).json({
         success: false,
         message: "No files found to delete",
       });
     }
-
+ 
     return res.status(200).json({
       success: true,
       message: `${result.affectedRows} file(s) deleted successfully`,
@@ -297,33 +308,38 @@ const deleteFile = asyncHandler(async (req, res) => {
 const getAllDeletedFiles = asyncHandler(async (req, res) => {
   const db = await connectDB();
   const userId = req.params.userId;
-
+ 
   if (!userId) {
     return res.status(400).json({
       success: false,
       message: "Invalid user ID",
     });
   }
-
+ 
   try {
     const [result] = await db.query(
       `
           SELECT * FROM files
-          WHERE delete_flag = TRUE  AND user_id = ?
+          WHERE delete_flag = TRUE AND user_id = ?
           `,
       [userId]
     );
-
+ 
+    const filesWithConvertedTimes = result.map((file) => ({
+      ...file,
+      deleted_at: file.deleted_at ? convertToIndianTime(file.deleted_at) : null,
+    }));
+ 
     if (!result.length) {
       return res.status(404).json({
         success: false,
         message: "No files found for the user.",
       });
     }
-
+ 
     return res.status(200).json({
       success: true,
-      data: result,
+      data: filesWithConvertedTimes,
       count: result.length,
       message: "All deleted files fetched successfully",
     });
@@ -339,35 +355,38 @@ const getAllDeletedFiles = asyncHandler(async (req, res) => {
 const RestoreFile = asyncHandler(async (req, res) => {
   const db = await connectDB();
   const fileId = req.params.fileId;
-
+ 
   if (!fileId) {
     return res.status(400).json({
       success: false,
       message: "Invalid file ID",
     });
   }
-
+ 
   try {
+    // Set delete_flag to FALSE and reset deleted_at to NULL (or to current time if preferred)
     const [result] = await db.query(
-      `UPDATE files SET delete_flag = FALSE WHERE  file_id = ?;`,
+      `UPDATE files
+       SET delete_flag = FALSE, deleted_at = NULL
+       WHERE file_id = ?;`,
       [fileId]
     );
-
+ 
     if (result.affectedRows === 0) {
       return res.status(404).json({
         success: false,
         message: "No file found to restore",
       });
     }
-
+ 
     return res.status(200).json({
       success: true,
-      message: "File restore successfully",
+      message: "File restored successfully",
     });
   } catch (error) {
     return res.status(500).json({
       success: false,
-      message: "Error restore file",
+      message: "Error restoring file",
     });
   }
 });
