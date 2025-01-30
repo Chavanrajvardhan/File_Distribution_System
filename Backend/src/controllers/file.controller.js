@@ -125,27 +125,31 @@ const getAllUserFiles = asyncHandler(async (req, res) => {
 const getAllReceivers = asyncHandler(async (req, res) => {
   const db = await connectDB();
   const dbName = process.env.DBNAME;
-
+  const userId = req.user.user_id;
+ 
   // Retrieve only users with the role "receiver"
   const [result] = await db.query(`
-                SELECT 
-                    user_id, 
-                    first_name, 
-                    middle_name, 
-                    last_name, 
-                    email, 
-                    role, 
-                    created_at 
+                SELECT
+                    user_id,
+                    first_name,
+                    middle_name,
+                    last_name,
+                    email,
+                    role,
+                    created_at
                 FROM ${dbName}.users
-                WHERE role = 'receiver'|| 'senderreceiver'   
-            `);// change speling mistake here and user controller
+                WHERE
+                  role IN ('receiver', 'senderreceiver')
+                  AND user_id != ?  
+ 
+            `, [userId]);
   if (result.length === 0) {
     return res.status(404).json({
       success: false,
       message: "No receivers found",
     });
   }
-
+ 
   return res.status(200).json({
     success: true,
     data: result,
@@ -153,6 +157,7 @@ const getAllReceivers = asyncHandler(async (req, res) => {
     message: "All receivers fetched successfully",
   });
 });
+
 
 
 const getAllUserFilesToDownload = asyncHandler(async (req, res) => {
@@ -186,8 +191,10 @@ const getAllUserFilesToDownload = asyncHandler(async (req, res) => {
             CASE 
                 WHEN (from_time IS NULL AND to_time IS NULL) THEN 'Available'
                 WHEN (UTC_TIMESTAMP() < from_time) THEN 'Unavailable'
+                WHEN (UTC_TIMESTAMP() > from_time) THEN 'Available'
                 WHEN (UTC_TIMESTAMP() BETWEEN from_time AND to_time) THEN 'Available'
                 WHEN (UTC_TIMESTAMP() > to_time) THEN 'Unavailable'
+                WHEN (UTC_TIMESTAMP() < to_time) THEN 'Available'
                 ELSE 'Unavailable'
             END AS availabilityStatus
             FROM 
