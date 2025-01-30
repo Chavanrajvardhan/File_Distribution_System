@@ -92,7 +92,7 @@ const Registration = () => {
   };
 
   const validateInputs = () => {
-    const isValid = true;
+    let isValid = true;
 
     if (!formData.first_name) {
       showAlert("error", "First name is required.");
