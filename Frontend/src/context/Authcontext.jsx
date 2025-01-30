@@ -5,8 +5,8 @@ const AuthContext = createContext();
  
 // AuthProvider to wrap the app
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null); // To store user data
-  const [userRole, setUserRole] = useState(null); // To store user role
+  const [user, setUser] = useState(null); 
+  const [userRole, setUserRole] = useState(null); 
  
   // Load user data from localStorage when the app initializes
   useEffect(() => {
@@ -14,7 +14,7 @@ export const AuthProvider = ({ children }) => {
     const storedRole = localStorage.getItem("userRole");
 
     if (storedUser && storedRole) {
-        setUser(JSON.parse(storedUser)); // Correctly parse the stored user string to an object
+        setUser(JSON.parse(storedUser)); 
         setUserRole((storedRole));
     } 
 }, []);
