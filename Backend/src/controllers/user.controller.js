@@ -25,7 +25,7 @@ const generateAccessTokenAndRefreshToken = async (user_id) => {
 
     return { accessToken, refreshToken };
   } catch (error) {
-    console.log(error);
+    console.error(error);
   }
 };
 
