@@ -3,7 +3,7 @@ import axios from "axios";
 import { useAuth } from "../context/Authcontext";
 
 const Home1 = () => {
-  const { userRole, user } = useAuth(); // User's role fetched from context
+  const { userRole, user } = useAuth();
   const [userId, setUserId] = useState(null);
   const [fileStats, setFileStats] = useState({
     totalFilesAvailable: 0,
@@ -21,7 +21,6 @@ const Home1 = () => {
   useEffect(() => {
     const fetchFileStats = async () => {
       try {
-        // Send the role dynamically to the backend
         const response = await axios.get(`/api/file/fileStatus`);
         setFileStats(response.data.data);
       } catch (error) {
@@ -29,7 +28,7 @@ const Home1 = () => {
       }
     };
     fetchFileStats();
-  }, [userRole]); // Fetch stats whenever the userRole changes
+  }, [userRole]); 
 
   // Helper Function: Render a single card
   const renderCard = (title, count) => (
