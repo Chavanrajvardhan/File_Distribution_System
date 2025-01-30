@@ -21,15 +21,11 @@ export const scheduleFiles = async () => {
 
                 try {
                     // Simulate file-sharing logic
-                    console.log(`Sharing file: ${file_name} with user ID: ${user_id}`);
-
                     // Update the task status to 'completed'
                     await db.query(
                         "UPDATE sharefiles SET status = 'completed' WHERE id = ? AND status = 'pending'",
                         [id]
                       );
-                      
-                    console.log(`Task ${id} completed.`);
                 } catch (error) {
                     console.error(`Failed to process task ${id}:`, error.message);
 
