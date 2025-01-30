@@ -158,8 +158,6 @@ const getAllReceivers = asyncHandler(async (req, res) => {
   });
 });
 
-
-
 const getAllUserFilesToDownload = asyncHandler(async (req, res) => {
   const db = await connectDB();
   const userId = req.user.user_id;
