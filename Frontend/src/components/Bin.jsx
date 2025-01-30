@@ -155,7 +155,6 @@ const BinComponent = () => {
               <tr>
                 <th className="p-2">File Name</th>
                 <th className="p-2">Deleted Date</th>
-                <th className="p-2">Deleted Time</th>
                 <th className="p-2">Actions</th>
               </tr>
             </thead>
@@ -174,8 +173,8 @@ const BinComponent = () => {
                     >
                       {file.file_name}
                     </td>
-                    <td className="px-6 py-4">{file.deletedDate}</td>
-                    <td className="px-6 py-4">{file.deletedTime}</td>
+                    <td className="px-6 py-4">{file.deleted_at}</td>
+                 
                     <td className="px-6 py-4 flex gap-2 justify-center">
                       <button
                         onClick={() => handleRestore(file.file_id)}
