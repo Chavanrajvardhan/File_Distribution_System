@@ -49,14 +49,14 @@ const Login = () => {
     return (
       <Alert
         sx={{
-          display: "flex", // Flex container for centering
-          justifyContent: "center", // Center horizontally
-          alignItems: "center", // Center vertically
-          position: "fixed", // Fixed position to remain visible
-          top: "40px", // Move to the center vertically
-          left: "50%", // Move to the center horizontally
-          transform: "translate(-50%, -50%)", // Offset by half the width and height
-          zIndex: 9999, // Ensure it stays on top
+          display: "flex", 
+          justifyContent: "center", 
+          alignItems: "center", 
+          position: "fixed",
+          top: "40px", 
+          left: "50%", 
+          transform: "translate(-50%, -50%)",
+          zIndex: 9999, 
           maxWidth: "400px",
         }}
         startDecorator={alertProps.icon}
@@ -84,10 +84,6 @@ const Login = () => {
 
   const validateInputs = () => {
     let valid = true;
-
-    // Email validation
-
-    // Password validation
     if (!formData.password) {
       showAlert("error", "Password is required.");
       valid = false;
