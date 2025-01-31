@@ -502,6 +502,48 @@ rules.forEach(rule => {
   }
 });
 
+// const getAllUserRules = asyncHandler(async (req, res) => {
+//   const db = await connectDB();
+//   const user_id = req.user.user_id;
+ 
+//   try {
+//     // Fetch all rules created by the user
+//     const [rules] = await db.query(
+//       `SELECT *
+//        FROM rules
+//        WHERE user_id = ?`,
+//       [user_id]
+//     );
+ 
+//     if (!rules || rules.length === 0) {
+//       return res.status(404).json({
+//         status: false,
+//         message: "No rules found for the user",
+//       });
+//     }
+ 
+//     const rulesdata = rules.map(rule => ({
+//       ...rule,
+//       from_time: convertToIndianTime(rule.from_time),
+//       to_time: convertToIndianTime(rule.to_time),    
+//       schedule_time: convertToIndianTime(rule.schedule_time),
+//     }));
+ 
+//     // Send back the rules in the response
+//     return res.status(200).json({
+//       success: true,
+//       message: "User rules fetched successfully",
+//       data: rulesdata,
+//     });
+//   } catch (error) {
+//     return res.status(500).json({
+//       status: false,
+//       message: "Internal Server Error",
+//       error: error.message,
+//     });
+//   }
+// })
+
 const getAllUserRules = asyncHandler(async (req, res) => {
   const db = await connectDB();
   const user_id = req.user.user_id;
@@ -521,15 +563,69 @@ const getAllUserRules = asyncHandler(async (req, res) => {
         message: "No rules found for the user",
       });
     }
+
+    // Fetch all users data once
+    const [users] = await db.query(
+      `SELECT user_id, first_name, last_name 
+       FROM users`
+    );
+
+    // Create a map of user details for quick lookup
+    const userMap = new Map(
+      users.map(user => [user.user_id, { 
+        first_name: user.first_name, 
+        last_name: user.last_name 
+      }])
+    );
  
-    const rulesdata = rules.map(rule => ({
-      ...rule,
-      from_time: convertToIndianTime(rule.from_time),
-      to_time: convertToIndianTime(rule.to_time),    
-      schedule_time: convertToIndianTime(rule.schedule_time),
-    }));
+    const rulesdata = rules.map(rule => {
+      // Initialize recipients array
+      let recipientsList = [];
+
+      // Handle recipients field (array or null)
+      if (rule.recipients && Array.isArray(rule.recipients)) {
+        recipientsList = [...rule.recipients];
+      } else if (rule.recipients && typeof rule.recipients === 'string') {
+        try {
+          recipientsList = JSON.parse(rule.recipients);
+        } catch (e) {
+          console.error(`Error parsing recipients for rule ${rule.id}:`, e);
+        }
+      }
+
+      // Handle recipients1 field (single value or empty array)
+      if (rule.recipients1) {
+        if (Array.isArray(rule.recipients1) && rule.recipients1.length > 0) {
+          recipientsList = [...recipientsList, ...rule.recipients1];
+        } else if (typeof rule.recipients1 === 'number') {
+          recipientsList.push(rule.recipients1);
+        }
+      }
+
+      // Remove duplicates
+      recipientsList = [...new Set(recipientsList)];
+
+      // Add recipient details
+      const recipientsWithDetails = recipientsList.map(recipientId => {
+        const userDetails = userMap.get(recipientId);
+        return {
+          user_id: recipientId,
+          first_name: userDetails?.first_name || 'Unknown',
+          last_name: userDetails?.last_name || 'User'
+        };
+      });
+
+      // console.log("recipientsWithDetails", recipientsWithDetails);
+      return {
+        ...rule,
+        from_time: convertToIndianTime(rule.from_time),
+        to_time: convertToIndianTime(rule.to_time),    
+        schedule_time: convertToIndianTime(rule.schedule_time),
+        recipients1: recipientsWithDetails
+      };
+    });
  
-    // Send back the rules in the response
+    // console.log("rulesdata", rulesdata);
     return res.status(200).json({
       success: true,
       message: "User rules fetched successfully",
@@ -542,7 +638,7 @@ const getAllUserRules = asyncHandler(async (req, res) => {
       error: error.message,
     });
   }
-})
+});
 
 const updateUserRule = asyncHandler(async (req, res) => {
   const db = await connectDB();
