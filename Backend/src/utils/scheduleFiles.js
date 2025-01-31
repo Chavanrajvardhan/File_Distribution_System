@@ -40,14 +40,6 @@ export const scheduleFiles = async () => {
                  AND STR_TO_DATE(deleted_at, '%Y-%m-%dT%H:%i:%s.%fZ') < UTC_TIMESTAMP() - INTERVAL 7 DAY`
             );
  
-             
- 
-            if (deletedFiles.affectedRows > 0) {
-                console.log(`Deleted ${deletedFiles.affectedRows} old bin file(s).`);
-            } else {
-                console.log("No files to delete from bin.");
-            }
- 
         } catch (error) {
             console.error("Error processing scheduled tasks:", error.message);
         }
