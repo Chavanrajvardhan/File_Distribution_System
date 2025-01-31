@@ -60,13 +60,13 @@ function Rules() {
     return (
       <Alert
         sx={{
-          display: "flex", 
+          display: "flex",
           justifyContent: "center",
           alignItems: "center",
-          position: "fixed", 
+          position: "fixed",
           top: "40px",
           left: "50%",
-          transform: "translate(-50%, -50%)", 
+          transform: "translate(-50%, -50%)",
           zIndex: 9999,
           maxWidth: "400px",
         }}
@@ -143,7 +143,6 @@ function Rules() {
 
   const fetchRules = async () => {
     try {
-
       const receiversResponse = await axios.get("/api/file/getAllReceivers");
       if (receiversResponse.data.data) {
         setReceivers(
@@ -158,9 +157,9 @@ function Rules() {
 
       const response = await axios.get("/api/rule/allUserRules");
       if (response.data.success == true) {
+        console.log("Rules fetched successfully:", response.data.data);
         setRules(response.data.data);
       }
- 
     } catch (err) {
       // console.error("Failed to fetch rules:", err.message);
     }
@@ -215,7 +214,10 @@ function Rules() {
         showAlert("success", response.data.message);
       }
     } catch (error) {
-      showAlert("error", error.response?.data?.message || "Failed to save rule");
+      showAlert(
+        "error",
+        error.response?.data?.message || "Failed to save rule"
+      );
     }
   };
 
@@ -270,12 +272,12 @@ function Rules() {
     const fromTimeFormatted = convertBackendDateToForm(rule.from_time);
     const toTimeFormatted = convertBackendDateToForm(rule.to_time);
 
-    const sizeInMB = rule.allowed_file_size / 1024 /1024;
+    const sizeInMB = rule.allowed_file_size / 1024 / 1024;
     // Set form data
     setFormData({
       name: rule.rule_name || "",
       fileType: Array.isArray(rule.format) ? rule.format : "",
-      fileSize: sizeInMB ?.toString() || null,
+      fileSize: sizeInMB?.toString() || null,
       fromTime: fromTimeFormatted,
       toTime: toTimeFormatted,
       recipients: selectedRecipientsList,
@@ -290,19 +292,25 @@ function Rules() {
 
   const handleDeleteRule = async (id) => {
     // if (!window.confirm("Are you sure you want to delete this rule?")) return;
-  
+
     try {
       const response = await axios.delete(`/api/rule/deleteRule/${id}`);
-  
+
       if (response.data.status) {
         showAlert("success", response.data.message);
         fetchRules();
       } else {
-        console.error("Failed to delete rule:", response.data.message || "Unknown error");
+        console.error(
+          "Failed to delete rule:",
+          response.data.message || "Unknown error"
+        );
       }
     } catch (error) {
       console.error("Error deleting rule:", error.message);
-      showAlert("error", error.response?.data?.message || "Failed to delete rule");
+      showAlert(
+        "error",
+        error.response?.data?.message || "Failed to delete rule"
+      );
     }
   };
 
@@ -316,7 +324,7 @@ function Rules() {
 
   return (
     <div className="px-6 py-4 rounded-3xl bg-cardColor overflow-hidden min-h-screen">
-       {alert.show && (
+      {alert.show && (
         <AlertComponent
           type={alert.type}
           message={alert.message}
@@ -350,7 +358,6 @@ function Rules() {
               </tr>
             </thead>
             <tbody>
-              
               {rules.map((rule) => (
                 <tr
                   key={rule.id}
@@ -393,10 +400,22 @@ function Rules() {
                   >
                     {rule.to_time || "Not defined"}
                   </td>
-          
-                  <td className="px-6 py-4"
-                  title={rule.recipients && rule.recipients.length > 0 ? rule.recipients.join(", ") : "Not defined"}>
-                    {rule.recipients && rule.recipients.length > 0 ? rule.recipients.join(", ") : "Not defined"}
+
+                  <td
+                    className="px-6 py-4"
+                    title={
+                      rule.recipients1 && rule.recipients1.length > 0
+                        ? rule.recipients1
+                            .map((r) => `${r.first_name} ${r.last_name}`)
+                            .join(", ")
+                        : "Not defined"
+                    }
+                  >
+                    {rule.recipients1 && rule.recipients1.length > 0
+                      ? rule.recipients1
+                          .map((r) => `${r.first_name} ${r.last_name}`)
+                          .join(", ")
+                      : "Not defined"}
                   </td>
                   <td className="py-4 flex gap-2 justify-center">
                     <button
