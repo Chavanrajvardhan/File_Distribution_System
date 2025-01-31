@@ -402,7 +402,7 @@ function Rules() {
                   </td>
 
                   <td
-                    className="px-6 py-4"
+                    className="px-6 py-4 truncate max-w-[140px] overflow-hidden whitespace-nowrap text-ellipsis cursor-pointer"
                     title={
                       rule.recipients1 && rule.recipients1.length > 0
                         ? rule.recipients1
