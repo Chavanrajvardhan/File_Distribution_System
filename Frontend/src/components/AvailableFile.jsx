@@ -255,8 +255,8 @@ function AvailableFile() {
   };
 
   const handleShare = async () => {
-    if (!selectedReceivers.length || !selectedFiles.length) {
-      showAlert("error", "Please select receivers and files to share.");
+    if (!selectedFiles.length) {
+      showAlert("error", "Please select files to share.");
       return;
     }
     // Prepare the common data
