@@ -94,40 +94,6 @@ const Registration = () => {
   const validateInputs = () => {
     let isValid = true;
 
-    if (!formData.first_name) {
-      showAlert("error", "First name is required.");
-      isValid = false;
-    } else if (!formData.middle_name) {
-      showAlert("error", "Middle name is required.");
-      isValid = false;
-    } else if (!formData.last_name) {
-      showAlert("error", "Last name is required.");
-      isValid = false;
-    }
-
-    if (!formData.email) {
-      showAlert("error", "Email is required.");
-      isValid = false;
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      showAlert("error", "Invalid email address.");
-      isValid = false;
-    }
-
-    if (!formData.center_id) {
-      showAlert("error", "Center ID is required.");
-      isValid = false;
-    } else if (!/^[a-zA-Z0-9]+$/.test(formData.center_id)) {
-      showAlert("error", "Center ID must be alphanumeric.");
-      isValid = false;
-    }
-    if (!formData.pc_id) {
-      showAlert("error", "PC ID is required.");
-      isValid = false;
-    } else if (!/^[a-zA-Z0-9]+$/.test(formData.pc_id)) {
-      showAlert("error", "PC ID must be alphanumeric.");
-      isValid = false;
-    }
-
     if (!formData.password) {
       showAlert("error", "Password is required.");
       isValid = false;
@@ -140,6 +106,41 @@ const Registration = () => {
         "error",
         "Password must be at least 8 characters long and contain at least one letter, one number, and one special character."
       );
+      isValid = false;
+    }
+
+    if (!formData.pc_id) {
+      showAlert("error", "PC ID is required.");
+      isValid = false;
+    } else if (!/^[a-zA-Z0-9]+$/.test(formData.pc_id)) {
+      showAlert("error", "PC ID must be alphanumeric.");
+      isValid = false;
+    }
+    
+    if (!formData.center_id) {
+      showAlert("error", "Center ID is required.");
+      isValid = false;
+    } else if (!/^[a-zA-Z0-9]+$/.test(formData.center_id)) {
+      showAlert("error", "Center ID must be alphanumeric.");
+      isValid = false;
+    }
+
+    if (!formData.email) {
+      showAlert("error", "Email is required.");
+      isValid = false;
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      showAlert("error", "Invalid email address.");
+      isValid = false;
+    }
+
+    if (!formData.first_name) {
+      showAlert("error", "First name is required.");
+      isValid = false;
+    } else if (!formData.middle_name) {
+      showAlert("error", "Middle name is required.");
+      isValid = false;
+    } else if (!formData.last_name) {
+      showAlert("error", "Last name is required.");
       isValid = false;
     }
 
