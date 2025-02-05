@@ -29,8 +29,9 @@ const DownloadFiles = () => {
         const response = await axios.post(`/api/file/availableToDownload`);
 
         if (response.data.success) {
-          setFiles(response.data.data);
-          setSortedFiles(response.data.data);
+          const reversedFiles = response.data.data.reverse();
+          setFiles(reversedFiles);
+          setSortedFiles(reversedFiles);
         } else {
           console.error(response.data.message);
         }
@@ -222,7 +223,7 @@ const DownloadFiles = () => {
                     >
                       {file.sender_name}
                     </td>
-                    <td className="px-6 py-4 text-white">
+                    <td className="px-6 max-w-[140px] py-4 text-white">
                       {bytesToMB(file.file_size)}{" "}
                     </td>
                     {/* <td className="px-6 py-4 text-white">{file.created_at}</td> */}
