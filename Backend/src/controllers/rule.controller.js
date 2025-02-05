@@ -92,7 +92,7 @@ const shareFiles = asyncHandler(async (req, res) => {
  
  
   if (!receiverids || !Array.isArray(receiverids) || receiverids.length === 0) {
-    return res.status(400).json({ status: false, message: "Select User" });
+    return res.status(400).json({ status: false, message: "Select at least one Receiver" });
   }
  
  
@@ -309,6 +309,7 @@ const shareFilesUsingRules = asyncHandler(async (req, res) => {
       message: "At least one Rule ID is required.",
     });
   }
+
  
   if (!files || !Array.isArray(files) || files.length === 0) {
     return res.status(400).json({
@@ -380,6 +381,7 @@ rules.forEach(rule => {
       rule.recipients.forEach(recipient => combinedRecipients.add(recipient));
     }
   });
+
  
   // File Validation
   const invalidFiles = [];
@@ -454,6 +456,15 @@ rules.forEach(rule => {
  
   // Combine provided receiverids with unique recipients from rules
   const allReceivers = new Set([...receiverids, ...combinedRecipients]);
+
+  if (allReceivers.size === 0) {
+    return res.status(400).json({
+      status: false,
+      message: "At least one Receiver is required.",
+    });
+  }
+
+  
  
   // Continue processing valid files
   const created_at = new Date().toISOString();
