@@ -88,7 +88,7 @@ function Rules() {
     );
   };
 
-  const fileTypes = ["pdf", "docx", "xls", "txt", "png", "jpg", "jpeg", "gif"];
+  const fileTypes = ["pdf", "docx", "xlsx", "txt", "png", "jpg"];
   const fileTypeDropdownRef = useRef(null);
   const receiversDropdownRef = useRef(null);
 
