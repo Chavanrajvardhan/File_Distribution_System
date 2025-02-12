@@ -256,21 +256,21 @@ const getAllUserFilesToDownload = asyncHandler(async (req, res) => {
 const deleteFile = asyncHandler(async (req, res) => {
   const db = await connectDB();
   const fileIds = req.params.fileIds;
- 
+
   if (!fileIds) {
     return res.status(400).json({
       success: false,
       message: "No file IDs provided for deletion",
     });
   }
- 
+
   try {
     // Split the file IDs into an array
     const fileIdArray = fileIds
       .split(",")
       .map((id) => parseInt(id.trim()))
       .filter(Boolean);
- 
+
     if (fileIdArray.length === 0) {
       return res.status(400).json({
         success: false,
@@ -278,20 +278,20 @@ const deleteFile = asyncHandler(async (req, res) => {
       });
     }
     const deleted_at = new Date().toISOString(); // ISO 8601 format
- 
+
     // Update the files to mark as deleted
     const [result] = await db.query(
       `UPDATE files SET delete_flag = TRUE, deleted_at = ? WHERE file_id IN (?)`,
       [deleted_at, fileIdArray]
     );
- 
+
     if (result.affectedRows === 0) {
       return res.status(404).json({
         success: false,
         message: "No files found to delete",
       });
     }
- 
+
     return res.status(200).json({
       success: true,
       message: `${result.affectedRows} file(s) deleted successfully`,
@@ -308,14 +308,14 @@ const deleteFile = asyncHandler(async (req, res) => {
 const getAllDeletedFiles = asyncHandler(async (req, res) => {
   const db = await connectDB();
   const userId = req.params.userId;
- 
+
   if (!userId) {
     return res.status(400).json({
       success: false,
       message: "Invalid user ID",
     });
   }
- 
+
   try {
     const [result] = await db.query(
       `
@@ -324,19 +324,19 @@ const getAllDeletedFiles = asyncHandler(async (req, res) => {
           `,
       [userId]
     );
- 
+
     const filesWithConvertedTimes = result.map((file) => ({
       ...file,
       deleted_at: file.deleted_at ? convertToIndianTime(file.deleted_at) : null,
     }));
- 
+
     if (!result.length) {
       return res.status(404).json({
         success: false,
         message: "No files found for the user.",
       });
     }
- 
+
     return res.status(200).json({
       success: true,
       data: filesWithConvertedTimes,
@@ -355,14 +355,14 @@ const getAllDeletedFiles = asyncHandler(async (req, res) => {
 const RestoreFile = asyncHandler(async (req, res) => {
   const db = await connectDB();
   const fileId = req.params.fileId;
- 
+
   if (!fileId) {
     return res.status(400).json({
       success: false,
       message: "Invalid file ID",
     });
   }
- 
+
   try {
     // Set delete_flag to FALSE and reset deleted_at to NULL (or to current time if preferred)
     const [result] = await db.query(
@@ -371,14 +371,14 @@ const RestoreFile = asyncHandler(async (req, res) => {
        WHERE file_id = ?;`,
       [fileId]
     );
- 
+
     if (result.affectedRows === 0) {
       return res.status(404).json({
         success: false,
         message: "No file found to restore",
       });
     }
- 
+
     return res.status(200).json({
       success: true,
       message: "File restored successfully",
@@ -447,7 +447,7 @@ const getFileStatus = asyncHandler(async (req, res) => {
       const [filesUploaded] = await db.query(
         `
                   SELECT * FROM files 
-                  WHERE user_id = ?
+                  WHERE delete_flag = FALSE AND user_id = ?
                   `,
         [userId]
       );
@@ -466,7 +466,7 @@ const getFileStatus = asyncHandler(async (req, res) => {
       const [filesDownloaded] = await db.query(
         `
                   SELECT * FROM sharefiles 
-                  WHERE user_id = ?
+                  WHERE status = "completed" AND user_id = ?
                   `,
         [userId]
       );
@@ -476,7 +476,7 @@ const getFileStatus = asyncHandler(async (req, res) => {
       const [filesUploaded] = await db.query(
         `
                   SELECT * FROM files 
-                  WHERE user_id = ?
+                  WHERE delete_flag = FALSE AND user_id = ?
                   `,
         [userId]
       );
@@ -492,7 +492,7 @@ const getFileStatus = asyncHandler(async (req, res) => {
       const [filesDownloaded] = await db.query(
         `
                   SELECT * FROM sharefiles 
-                  WHERE user_id = ?
+                  WHERE status = "completed" AND  user_id = ?
                   `,
         [userId]
       );
