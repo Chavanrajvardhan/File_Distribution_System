@@ -49,26 +49,26 @@ const Home1 = () => {
         {/* Cards for All Roles */}
         {userRole === "senderreceiver" && (
           <>
-            {renderCard("Total Files Available", fileStats.totalFilesAvailable)}
+            {renderCard("Files Uploaded", fileStats.totalFilesAvailable)}
             {renderCard(
-              "Total Files Downloaded",
+              "Files Received", 
               fileStats.totalFilesDownloaded
             )}
-            {renderCard("Total Files Sent", fileStats.totalFilesSent)}
+            {renderCard("Files Shared", fileStats.totalFilesSent)}
           </>
         )}
         {/* Cards for Sender */}
         {userRole === "sender" && (
           <>
-            {renderCard("Total Files Available", fileStats.totalFilesAvailable)}
-            {renderCard("Total Files Sent", fileStats.totalFilesSent)}
+            {renderCard("Files Uploaded", fileStats.totalFilesAvailable)}
+            {renderCard("Files Shared", fileStats.totalFilesSent)}
           </>
         )}
         {/* Cards for Receiver */}
         {userRole === "receiver" && (
           <>
             {renderCard(
-              "Total Files Downloaded",
+              "Files Received",
               fileStats.totalFilesDownloaded
             )}
           </>
