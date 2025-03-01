@@ -173,13 +173,13 @@ const loginUser = asyncHandler(async (req, res) => {
         httpOnly: true,
         secure: true,
         sameSite: 'Strict', // Prevents the cookie from being sent with cross-site requests
-        maxAge: 24 * 60 * 60 * 1000, // 1 day in milliseconds
+        maxAge: 24 * 60 * 60 * 1000, // 1 day in milliseconds   24 * 60 * 60 * 1000,
     };
     
     // Options for refreshToken
     const refreshTokenOptions = {
         ...accessTokenOptions, // Inherits other properties
-        maxAge: 10 * 24 * 60 * 60 * 1000, // 10 days in milliseconds
+        maxAge: 10 * 24 * 60 * 60 * 1000, // 10 days in milliseconds   10 * 24 * 60 * 60 * 1000,
     };
 
     return res
@@ -190,7 +190,7 @@ const loginUser = asyncHandler(async (req, res) => {
             status: 200,
             success: true,
             data: {
-            newLogedInUser
+            newLogedInUser,
             },
             message: "user logged in Successfully"
         })
