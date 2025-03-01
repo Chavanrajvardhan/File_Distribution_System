@@ -1,78 +1,83 @@
 import asyncHandler from "../utils/asyncHandler.js";
 import connectDB from "../db/db.js";
-import { uploadOnCloudinary } from "../utils/cloudinary.js";
+// import { uploadOnCloudinary } from "../utils/cloudinary.js";
 import { convertToIndianTime } from "../utils/dateTimeConverter.js";
+import { uploadFilesOnS3Bucket, downloadFilesOnS3Bucket  } from "../utils/awsService.js";
+import mime from 'mime-types'
 
 const uploadFiles = asyncHandler(async (req, res) => {
   const db = await connectDB();
   const userId = req.user.user_id;
   const files = req.files;
-  const folder = "OUT";
-  const cloudinaryFolder = "Cloudinary_Bucket";
-
+  const folder = "File_Distribution_System/OUT"
+  console.log(files)
   if (!files || files.length === 0) {
     return res.status(400).json({
       success: false,
       message: "At least one file is required. Ensure files are uploaded.",
     });
   }
-
+ 
   try {
     const uploadedFiles = await Promise.all(
       files.map(async (file) => {
         const localFilePath = file.path;
-
-        // Upload file to Cloudinary
-        const uploadedFile = await uploadOnCloudinary(
-          localFilePath,
-          cloudinaryFolder
-        );
+        const orignalFileName = file.originalname;
+        const size = file.size;
+        const format = mime.extension(file.mimetype)
+        console.log(localFilePath,orignalFileName,size,format)
+        const uploadedFile = await uploadFilesOnS3Bucket(localFilePath, folder);
+ 
         if (!uploadedFile) {
           throw new Error(
-            `Error uploading file: ${file.originalname} to Cloudinary.`
+            `Error uploading file: ${file.originalname} to S3 bucket.`
           );
         }
-
+ 
+        const file_url = uploadedFile.Location;
+        console.log(uploadedFile)
         // Save file details in the database
+ 
         await db.query(
           `
-                    INSERT INTO files (user_id, file_url, file_name, file_size, resource_type, format, folder, created_at, updated_at) 
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-                    `,
+                       INSERT INTO files (user_id, file_url, file_name, file_size, format, folder, created_at, updated_at)
+                       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                       `,
           [
             userId,
-            uploadedFile.url,
-            uploadedFile.original_filename,
-            uploadedFile.bytes,
-            uploadedFile.resource_type,
-            uploadedFile.format,
+            file_url,
+            orignalFileName,
+            size,
+            format,
             folder,
             new Date().toISOString(),
             new Date().toISOString(),
           ]
         );
-
+ 
         const [savedFile] = await db.query(
           `
-                        SELECT * FROM files 
-                        WHERE file_url = ?
-                        `,
-          [uploadedFile.url]
+                           SELECT * FROM files
+                           WHERE file_url = ?
+                           `,
+          [uploadedFile.Location]
         );
-
+ 
         return {
           data: savedFile[0],
+          // data: uploadedFile,
         };
       })
     );
-
+    const fileNames = uploadedFiles.map((file) => file.data.file_name).join(", ");
+ 
     return res.status(200).json({
       success: true,
       data: uploadedFiles,
-      message: `${uploadedFiles.length} file(s) uploaded and data stored successfully.`,
+      message: `${fileNames}  uploaded successfully.`,
     });
   } catch (error) {
-    console.error("Database or Cloudinary error:", error);
+    console.error("Database  error:", error);
     return res.status(500).json({
       success: false,
       message: "Error uploading files and storing information in the database.",
@@ -183,7 +188,6 @@ const getAllUserFilesToDownload = asyncHandler(async (req, res) => {
                    user_id,
                    file_url,
                    file_size,
-                   resource_type,
                    file_name, 
                    from_time, 
                    to_time,
@@ -250,6 +254,32 @@ const getAllUserFilesToDownload = asyncHandler(async (req, res) => {
       message: "Error fetching user files.",
       error: error.message,
     });
+  }
+});
+
+const downloadFiles = asyncHandler(async (req, res) => {
+  try {
+    const { fileName } = req.body;
+    if (!fileName) {
+      return res.status(400).json({ message: "File name required" });
+    }
+ 
+    const folder = "File_Distribution_System/OUT";
+    const fileData = await downloadFilesOnS3Bucket(folder, fileName);
+ 
+    if (!fileData || !fileData.Body) {
+      return res.status(404).json({ message: "File not found in S3" });
+    }
+ 
+    // Set headers for file download
+    res.setHeader("Content-Disposition", `attachment; filename="${fileName}"`);
+    res.setHeader("Content-Type", fileData.ContentType || "application/octet-stream");
+ 
+    // Send file data as a binary stream
+    return res.send(fileData.Body);
+  } catch (error) {
+    console.error("Error downloading file:", error);
+    return res.status(500).json({ message: "Internal server error" });
   }
 });
 
@@ -525,6 +555,7 @@ export {
   getAllUserFiles,
   getAllReceivers,
   getAllUserFilesToDownload,
+  downloadFiles,
   deleteFile,
   getAllDeletedFiles,
   RestoreFile,
