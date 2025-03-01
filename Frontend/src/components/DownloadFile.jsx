@@ -2,6 +2,37 @@ import React, { useState, useEffect } from "react";
 import { useAuth } from "../context/Authcontext";
 import axios from "axios";
 import { FaSort, FaCheck, FaTimes } from "react-icons/fa";
+import CircularProgress from "@mui/material/CircularProgress";
+import Typography from "@mui/material/Typography";
+import Box from "@mui/material/Box";
+
+function CircularProgressWithLabel(props) {
+  return (
+    <Box sx={{ position: "relative", display: "inline-flex", mr: 1 }}>
+      <CircularProgress variant="determinate" size={24} {...props} />
+      <Box
+        sx={{
+          top: 0,
+          left: 0,
+          bottom: 0,
+          right: 0,
+          position: "absolute",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <Typography
+          variant="caption"
+          component="div"
+          sx={{ color: "black", fontSize: "1 rem", fontWeight: "bold" }}
+        >
+          {`${Math.round(props.value)}%`}
+        </Typography>
+      </Box>
+    </Box>
+  );
+}
 
 const DownloadFiles = () => {
   const { user } = useAuth();
@@ -10,6 +41,8 @@ const DownloadFiles = () => {
   const [userId, setUserId] = useState(null);
   const [currentSortKeys, setCurrentSortKeys] = useState([]);
   const [bulkDownloading, setBulkDownloading] = useState(false);
+  const [downloadProgress, setDownloadProgress] = useState(0);
+  const [downloadingFile, setDownloadingFile] = useState(null);
 
   // Filter states
   const [sortKey, setSortKey] = useState("");
@@ -45,35 +78,69 @@ const DownloadFiles = () => {
   }, [userId]);
 
   const handleDownload = async (file) => {
-    if (file.file_url) {
-      try {
-        const response = await fetch(file.file_url);
-        const blob = await response.blob();
-        const link = document.createElement("a");
-        link.href = URL.createObjectURL(blob);
-        link.setAttribute("download", file.file_name || "download.txt");
-        link.click();
-        URL.revokeObjectURL(link.href);
-      } catch (error) {
-        console.error(`Error downloading file ${file.file_name}:`, error);
+    setDownloadingFile(file.id);
+    const fileName = file.file_name;
+    try {
+      const response = await fetch("/api/file/downloadFiles", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ fileName }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to download file");
       }
-    } else {
-      console.error("File is not available for download or missing URL.");
+
+      // Convert response to a Blob
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+
+      // Create a temporary anchor tag and trigger download
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = fileName; // File name for the download
+      document.body.appendChild(a);
+      a.click();
+
+      // Cleanup
+      setDownloadingFile(null);
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (error) {
+      console.error("Download error:", error);
     }
   };
 
   const handleDownloadAll = async () => {
     setBulkDownloading(true);
+    setDownloadProgress(0);
+
     try {
-      for (const file of files) {
-        if (file.availabilityStatus === "Available") {
-          await handleDownload(file);
-        }
+      const availableFiles = files.filter(
+        (file) => file.availabilityStatus === "Available"
+      );
+      const totalFiles = availableFiles.length;
+
+      if (totalFiles === 0) {
+        setBulkDownloading(false);
+        return;
+      }
+
+      for (let i = 0; i < totalFiles; i++) {
+        await handleDownload(availableFiles[i]);
+        // Update progress after each file
+        const newProgress = Math.round(((i + 1) / totalFiles) * 100);
+        setDownloadProgress(newProgress);
       }
     } catch (error) {
       console.error("Error during bulk download:", error);
     } finally {
-      setBulkDownloading(false);
+      setTimeout(() => {
+        setBulkDownloading(false);
+        setDownloadProgress(0);
+      }, 1000); // Keep showing 100% for a second before resetting
     }
   };
 
@@ -138,13 +205,18 @@ const DownloadFiles = () => {
               bulkDownloading ||
               files.every((file) => file.availabilityStatus !== "Available")
             }
-            className={`py-2 px-4 rounded text-white ${
+            className={`py-2 px-4 rounded text-white flex items-center ${
               bulkDownloading
+                ? "bg-blue-500"
+                : files.every((file) => file.availabilityStatus !== "Available")
                 ? "bg-gray-400 cursor-not-allowed"
                 : "bg-blue-500 hover:bg-blue-600"
             }`}
           >
-            {bulkDownloading ? "Downloading..." : "Download All"}
+            {bulkDownloading && (
+              <CircularProgressWithLabel value={downloadProgress} />
+            )}
+            <span>{bulkDownloading ? "Downloading..." : "Download All"}</span>
           </button>
         )}
       </div>
@@ -267,14 +339,26 @@ const DownloadFiles = () => {
                     <td className="px-4 py-4">
                       <button
                         onClick={() => handleDownload(file)}
-                        disabled={file.availabilityStatus !== "Available"}
-                        className={`py-2 px-4 rounded text-white ${
+                        disabled={
+                          file.availabilityStatus !== "Available" ||
+                          downloadingFile
+                        }
+                        className={`py-2 px-4 rounded text-white flex items-center justify-center w-32 ${
                           file.availabilityStatus === "Available"
                             ? "bg-blue-500 hover:bg-blue-600"
                             : "bg-gray-400 cursor-not-allowed"
                         }`}
                       >
-                        Download
+                        {downloadingFile === file.id ? (
+                          <CircularProgress
+                            disableShrink
+                            size={20}
+                            sx={{ color: "white" }}
+                            className="text-white"
+                          />
+                        ) : (
+                          "Download"
+                        )}
                       </button>
                     </td>
                   </tr>
