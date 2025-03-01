@@ -10,6 +10,7 @@ import {
   RestoreFile,
   permanentDeleteFile,
   getFileStatus,
+  downloadFiles,
 
   // getFileStatus,
 } from "../controllers/file.controller.js";
@@ -33,5 +34,6 @@ router.route("/RestoreFile/:fileId").post(RestoreFile);
 router.route("/permanentDelete/:fileId").delete(permanentDeleteFile);
 router.route("/allDeletedFiles/:userId").get(getAllDeletedFiles);
 router.route("/fileStatus").get(getFileStatus);
+router.route("/downloadFiles").post(downloadFiles)
 
 export default router;
