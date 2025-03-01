@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Outlet, NavLink } from "react-router-dom";
 import {
   Home,
@@ -15,14 +15,25 @@ import axios from "axios";
 import ExitToAppOutlinedIcon from "@mui/icons-material/ExitToAppOutlined";
  
 const Dashboard = () => {
-  const { userRole, logout } = useAuth();
-  const storedUserData = localStorage.getItem("user");
-  const userdata = JSON.parse(storedUserData);
+  const { isAuthenticated, userRole, logout } = useAuth();
   const navigate = useNavigate();
- 
+ console.log("User Role: ", userRole);
   const [isCollapsed, setIsCollapsed] = useState(false); // Sidebar collapse state
   const [showLogoutModal, setShowLogoutModal] = useState(false); // Logout confirmation modal state
  
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      console.log("User is not authenticated. Redirecting to login page...");
+      navigate("/login");
+    }else{
+      console.log("User is authenticated. Redirecting to dashboard...");
+    }
+  }, [isAuthenticated, navigate]);
+
+  const storedUserData = localStorage.getItem("user");
+  const userdata = JSON.parse(storedUserData);
+  
   const handleLogout = async () => {
     try {
       const response = await axios.post(
@@ -32,7 +43,7 @@ const Dashboard = () => {
       );
       if (response.data.success) {
         logout();
-        navigate("/");
+        navigate("/login");
       }
     } catch (error) {
       console.error("Error during logout:", error);
@@ -41,17 +52,17 @@ const Dashboard = () => {
  
   const menuItems = {
     sender: [
-      { text: "Home", icon: <Home />, link: "home" },
+      { text: "Home", icon: <Home />, link: "/" },
       { text: "Available Files", icon: <Folder />, link: "available-files" },
       { text: "Rules", icon: <Rule />, link: "rules" },
       { text: "Bin", icon: <Delete />, link: "bin" },
     ],
     receiver: [
-      { text: "Home", icon: <Home />, link: "home" },
+      { text: "Home", icon: <Home />, link: "/" },
       { text: "Download Files", icon: <Download />, link: "download-files" },
     ],
     senderreceiver: [
-      { text: "Home", icon: <Home />, link: "home" },
+      { text: "Home", icon: <Home />, link: "/" },
       { text: "Available Files", icon: <Folder />, link: "available-files" },
       { text: "Download Files", icon: <Download />, link: "download-files" },
       { text: "Rules", icon: <Rule />, link: "rules" },
