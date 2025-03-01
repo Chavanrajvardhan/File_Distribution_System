@@ -118,10 +118,8 @@ const Login = () => {
       if (response.status === 200 && response.data.success) {
         const role = response.data.data.newLogedInUser.role;
         const user = response.data.data.newLogedInUser;
-        localStorage.setItem("user", JSON.stringify(user));
-        localStorage.setItem("role", role);
         login(user);
-   
+        navigate("/");
       } else {
         showAlert("error", response.data.message || "Login failed!");
       }
