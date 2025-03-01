@@ -5,7 +5,7 @@ import connectDB from "../db/db.js";
 export const verifyJWT = asyncHandler(async (req, res, next) => {
     try {
         const db = await connectDB()
-        const token = req.cookies?.accessToken || req.header("Authorization")?.replace("Bearer ", "");
+        const token = req.cookies?.accessToken ;
         if (!token) {
             throw new ApiError(401, "Unauthorized request");
         }
@@ -30,6 +30,7 @@ export const verifyJWT = asyncHandler(async (req, res, next) => {
 
         req.user = user;
         next();
+        
     } catch (error) {
         return res.status(401).json({
             success: false,
@@ -37,4 +38,3 @@ export const verifyJWT = asyncHandler(async (req, res, next) => {
         });
     }
 });
-
