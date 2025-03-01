@@ -9,6 +9,8 @@ import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import WarningIcon from "@mui/icons-material/Warning";
 import ReportIcon from "@mui/icons-material/Report";
 import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
+import { LinearProgress, Box } from "@mui/material";
+// import LinearProgress from '@mui/material/LinearProgress';
 
 function AvailableFile() {
   const { userRole, user } = useAuth();
@@ -32,6 +34,8 @@ function AvailableFile() {
   const [receiverDropdownOpen, setReceiverDropdownOpen] = useState(false);
   const [rulesDropdownOpen, setRulesDropdownOpen] = useState(false);
   const [sharingMode, setSharingMode] = useState("none");
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploading, setUploading] = useState(false);
 
   const [alert, setAlert] = useState({
     show: false,
@@ -169,22 +173,38 @@ function AvailableFile() {
       formData.append("file", file);
     }
 
+    setUploading(true);
+    setUploadProgress(0);
+
     try {
       const response = await axios.post("/api/file/uploadFile", formData, {
         headers: { "Content-Type": "multipart/form-data" },
+        onUploadProgress: (progressEvent) => {
+          const percentCompleted = Math.round(
+            (progressEvent.loaded * 100) / progressEvent.total
+          );
+          setUploadProgress(percentCompleted);
+        },
       });
 
       if (response.data.success) {
         const newFiles = response.data.data;
         setFiles((prev) => [...prev, ...newFiles.map((file) => file.data)]);
+        setUploadProgress(100);
+        setTimeout(() => {
+          setUploading(false);
+          setUploadProgress(0);
+        }, 500);
         showAlert("success", "Files uploaded successfully!");
       } else {
         console.error("Error uploading files:", response.data.message);
         showAlert("error", "Failed to upload files.");
+        setUploading(false);
       }
     } catch (error) {
       console.error("Error uploading files:", error);
       showAlert("error", "Failed to upload files.");
+      setUploading(false);
     }
   };
 
@@ -346,17 +366,42 @@ function AvailableFile() {
     setSelectedRules(selectedList);
   };
 
+  const isPastDate = (dateValue) => {
+    if (!dateValue) return false;
+    const selectedDate = new Date(dateValue);
+    const now = new Date();
+    return selectedDate < now;
+  };
+
   const handleDateTimeChange = (e) => {
-    if (e.target.value) {
+    const newValue = e.target.value;
+
+    if (isPastDate(newValue)) {
+      showAlert("error", "Please select a future date and time");
+      return;
+    }
+
+    if (newValue) {
       setSharingMode("schedule");
       setSelectedRules([]);
-    } else if (!e.target.value && !selectedFromTime && !selectedToTime) {
+    } else if (!newValue && !selectedFromTime && !selectedToTime) {
       setSharingMode("none");
     }
-    setSelectedDateTime(e.target.value);
+    setSelectedDateTime(newValue);
   };
 
   const handleAvailabilityChange = (type, value) => {
+    if (isPastDate(value)) {
+      // setError(`Please select a future ${type === 'from' ? 'start' : 'end'} date and time`);
+      showAlert(
+        "error",
+        `Please select a future ${
+          type === "from" ? "start" : "end"
+        } date and time`
+      );
+      return;
+    }
+
     if (value) {
       setSharingMode("schedule");
       setSelectedRules([]);
@@ -366,6 +411,23 @@ function AvailableFile() {
       (type === "from" ? !selectedToTime : !selectedFromTime)
     ) {
       setSharingMode("none");
+    }
+
+    // Additional validation for from/to time relationship
+    if (
+      type === "from" &&
+      selectedToTime &&
+      new Date(value) >= new Date(selectedToTime)
+    ) {
+      showAlert("error", "From time should be less than To time");
+      return;
+    } else if (
+      type === "to" &&
+      selectedFromTime &&
+      new Date(value) <= new Date(selectedFromTime)
+    ) {
+      showAlert("error", "To time should be greater than From time");
+      return;
     }
 
     if (type === "from") {
@@ -395,6 +457,11 @@ function AvailableFile() {
 
   return (
     <div className="px-6 py-4 rounded-3xl bg-cardColor overflow-hidden min-h-screen">
+      {uploading && (
+        <Box sx={{ width: "100%" }}>
+          <LinearProgress sx={{ height: 3 }} color="success" />
+        </Box>
+      )}
       {alert.show && (
         <AlertComponent
           type={alert.type}
@@ -406,18 +473,20 @@ function AvailableFile() {
         <h2 className="p-2 text-2xl font-bold mb-6 text-white">
           Available Files
         </h2>
-        <button className="px-4 py-2 rounded bg-green-500 text-white">
-          <label htmlFor="file-upload" className="cursor-pointer">
-            Add New File
-          </label>
-          <input
-            type="file"
-            id="file-upload"
-            className="hidden"
-            onChange={handleFileUpload}
-            multiple
-          />
-        </button>
+        <div>
+          <button className="px-4 py-2 rounded bg-green-500 text-white">
+            <label htmlFor="file-upload" className="cursor-pointer">
+              Add New File
+            </label>
+            <input
+              type="file"
+              id="file-upload"
+              className="hidden"
+              onChange={handleFileUpload}
+              multiple
+            />
+          </button>
+        </div>
       </div>
 
       <div className="mb-4 flex justify-between">
@@ -526,14 +595,26 @@ function AvailableFile() {
       {showShareForm && (
         <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
           <div className="bg-white p-6 rounded-lg w-full max-w-lg">
-            <h3 className="text-lg font-semibold mb-4 text-gray-800 text-center">
+            <h3 className="text-lg font-semibold mb-2 text-gray-800 text-center">
               Share File
             </h3>
+            <div className="flex flex-cloumn gap-2">
+              <h3 className="text-lg font-semibold mb-2 text-gray-800 ">
+                Selected files :
+              </h3>
+              <h3 className="">
+                {selectedFiles.map((file) => (
+                  <div key={file.file_id} className="text-blue-700">
+                    {file.file_name}.{file.format},
+                  </div>
+                ))}
+              </h3>
+            </div>
             <div className="space-y-4">
               {/* Receiver Multi-Select */}
               <div
                 ref={receiverDropdownRef}
-                className="relative"
+                className="relative mt-2"
                 onClick={() => setReceiverDropdownOpen(!receiverDropdownRef)}
               >
                 <Multiselect
