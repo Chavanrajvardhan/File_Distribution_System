@@ -309,7 +309,7 @@ const Registration = () => {
         <p className="text-center mt-4 text-white">
           Already have an account?{" "}
           <button
-            onClick={() => navigate("/")}
+            onClick={() => navigate("/login")}
             className="text-orange-500 hover:underline"
           >
             Login
