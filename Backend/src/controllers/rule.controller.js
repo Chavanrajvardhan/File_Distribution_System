@@ -103,7 +103,7 @@ const shareFiles = asyncHandler(async (req, res) => {
  
   for (const file of files) {
     file.format = file.format ?? null;
-    if (!(file.file_url && file.file_name && file.file_size && file.resource_type)) {
+    if (!(file.file_url && file.file_name && file.file_size )) {
       return res.status(400).json({ status: false, message: "All file fields must be provided" });
     }
   }
@@ -129,8 +129,8 @@ const shareFiles = asyncHandler(async (req, res) => {
       const status = utcScheduleTime ? 'pending' : 'completed';
       db.query(
         `INSERT INTO sharefiles
-         (sender_id, sender_name, user_id, file_url, file_name, file_size, resource_type, format, folder, from_time, to_time, schedule_time, created_at, updated_at, status)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         (sender_id, sender_name, user_id, file_url, file_name, file_size,  format, folder, from_time, to_time, schedule_time, created_at, updated_at, status)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           sender_id,
           sender_name,
@@ -138,7 +138,6 @@ const shareFiles = asyncHandler(async (req, res) => {
           file.file_url,
           file.file_name,
           file.file_size,
-          file.resource_type,
           file.format,
           folder,
           utcFromTime,
@@ -473,8 +472,8 @@ rules.forEach(rule => {
   const insertPromises = validFiles.map((file) =>
     Array.from(allReceivers).map((receiverid) =>
       db.query(
-        `INSERT INTO sharefiles (sender_id, sender_name, user_id, file_url, file_name, file_size, resource_type, format, folder, from_time, to_time, schedule_time, status, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO sharefiles (sender_id, sender_name, user_id, file_url, file_name, file_size, format, folder, from_time, to_time, schedule_time, status, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           req.user.user_id,
           `${req.user.first_name} ${req.user.last_name}`,
@@ -482,7 +481,6 @@ rules.forEach(rule => {
           file.file_url,
           file.file_name,
           file.file_size,
-          file.resource_type,
           file.format || null,
           folder,
           rules[0].from_time || null,
@@ -512,48 +510,6 @@ rules.forEach(rule => {
     });
   }
 });
-
-// const getAllUserRules = asyncHandler(async (req, res) => {
-//   const db = await connectDB();
-//   const user_id = req.user.user_id;
- 
-//   try {
-//     // Fetch all rules created by the user
-//     const [rules] = await db.query(
-//       `SELECT *
-//        FROM rules
-//        WHERE user_id = ?`,
-//       [user_id]
-//     );
- 
-//     if (!rules || rules.length === 0) {
-//       return res.status(404).json({
-//         status: false,
-//         message: "No rules found for the user",
-//       });
-//     }
- 
-//     const rulesdata = rules.map(rule => ({
-//       ...rule,
-//       from_time: convertToIndianTime(rule.from_time),
-//       to_time: convertToIndianTime(rule.to_time),    
-//       schedule_time: convertToIndianTime(rule.schedule_time),
-//     }));
- 
-//     // Send back the rules in the response
-//     return res.status(200).json({
-//       success: true,
-//       message: "User rules fetched successfully",
-//       data: rulesdata,
-//     });
-//   } catch (error) {
-//     return res.status(500).json({
-//       status: false,
-//       message: "Internal Server Error",
-//       error: error.message,
-//     });
-//   }
-// })
 
 const getAllUserRules = asyncHandler(async (req, res) => {
   const db = await connectDB();
